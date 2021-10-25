@@ -1,0 +1,133 @@
+<?xml version="1.0"?>
+
+<robot name="laser" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!-- Define the laser macro -->
+  <xacro:macro name="laser" params="parent rn topic hz samples *origin min_angle:=-${M_PI} max_angle:=${M_PI}">
+
+    <joint name="${rn}laser_bottom_joint" type="fixed">
+      <xacro:insert_block name="origin" />
+      <parent link="${parent}"/>
+      <child link="${rn}base_laser_bottom"/>
+    </joint>
+    
+   <link name="${rn}base_laser_bottom">
+     <visual>
+        <origin xyz="0 0 0" rpy="0 0 0" />
+       <geometry>
+         <box size="0.05 0.05 0.041" />
+       </geometry>
+        <material name="DarkGrey"/>
+     </visual>
+     <collision>
+        <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <box size="0.05 0.05 0.041" />
+      </geometry>
+       </collision>
+	 <inertial>
+       <mass value="0.05" />
+         <inertia ixx="0.001" ixy="0.0" ixz="0.0"
+                   iyy="0.001" iyz="0.0"
+                   izz="0.001" />                     
+      </inertial>
+   </link>
+  
+   <joint name="${rn}base_laser_middle_joint" type="fixed">
+     <parent link="${rn}base_laser_bottom"/>
+     <child link="${rn}base_laser_middle" />
+     <origin xyz="0 0 0.02625" rpy="0 0 0" />
+   </joint>
+   
+   <link name="${rn}base_laser_middle">
+	 <visual>
+        <origin xyz="0 0 0" rpy="0 0 0" />
+		<geometry>
+          <cylinder length="0.0115" radius=".02"/>
+        </geometry>
+        <material name="DarkGrey"/>
+     </visual>
+     <collision>
+        <origin xyz="0 0 0" rpy="0 0 0" />
+		 <geometry>
+          <cylinder length="0.0115" radius=".02"/>
+         </geometry>
+       </collision>
+	 <inertial>
+       <mass value="0.05" />
+         <inertia ixx="0.001" ixy="0.0" ixz="0.0"
+                   iyy="0.001" iyz="0.0"
+                   izz="0.001" />                     
+      </inertial>
+   </link>
+   
+   <joint name="${rn}base_laser_joint" type="fixed">
+     <parent link="${rn}base_laser_middle"/>
+     <child link="${rn}base_laser" />
+     <origin xyz="0 0 0.0145" rpy="0 0 0" />
+   </joint>
+   
+   <link name="${rn}base_laser">
+	 <visual>
+        <origin xyz="0 0 0" rpy="0 0 0" />
+		<geometry>
+          <cylinder length="0.0175" radius=".0185"/>
+        </geometry>
+        <material name="DarkGrey"/>
+     </visual>
+     <collision>
+        <origin xyz="0 0 0" rpy="0 0 0" />
+		 <geometry>
+          <cylinder length="0.0175" radius=".0185"/>
+         </geometry>
+       </collision>
+	 <inertial>
+       <mass value="0.05" />
+         <inertia ixx="0.001" ixy="0.0" ixz="0.0"
+                   iyy="0.001" iyz="0.0"
+                   izz="0.001" />                     
+      </inertial>
+   </link>
+   
+  <!-- hokuyo -->
+  <gazebo reference="${rn}base_laser_bottom">
+    <sensor type="ray" name="laser_sensor">
+      <pose>0 0 0 0 0 0</pose>
+      <visualize>false</visualize>
+      <update_rate>${hz}</update_rate>
+      <ray>
+        <scan>
+          <horizontal>
+            <samples>${samples}</samples>
+            <resolution>1</resolution>
+            <min_angle>${min_angle}</min_angle>
+            <max_angle>${max_angle}</max_angle>
+          </horizontal>
+        </scan>
+        <range>
+          <min>0.05</min>
+          <max>30.0</max>
+          <resolution>0.01</resolution>
+        </range>
+        <noise>
+          <type>gaussian</type>
+          <!-- Noise parameters based on published spec for Hokuyo laser
+               achieving "+-30mm" accuracy at range < 10m.  A mean of 0.0m and
+               stddev of 0.01m will put 99.7% of samples within 0.03m of the true
+               reading. -->
+          <mean>0.0</mean>
+          <stddev>0.0</stddev>
+        </noise>
+      </ray>
+      <plugin name="gazebo_ros_${rn}_controller" filename="libgazebo_ros_laser.so">
+        <topicName>${topic}</topicName>
+        <frameName>${rn}base_laser_bottom</frameName>
+      </plugin>
+    </sensor>
+  </gazebo>
+
+
+  </xacro:macro>
+ 
+ </robot>
+ 

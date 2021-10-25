@@ -1,0 +1,48 @@
+<?xml version="1.0"?>
+
+<robot name="nexus" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!-- Nexus and laser with prefix argument to be used in namespacing -->
+
+  <!-- Included URDF Files -->
+  <xacro:include filename="$(find nexhom)/config/robot/materials.urdf.xacro" />
+  <xacro:include filename="$(find nexhom)/config/robot/base_multiple.xacro" />
+  <!--<xacro:include filename="$(find lasmultidescription3)/urdf/laser_multiple.urdf.xacro" /> -->   <!--laser with shape of RPlidar-->
+  <xacro:include filename="$(find nexhom)/config/sensor/hokuyo_utm30lx.urdf.xacro" />    <!--laser with shape of Hokuyo lidar (requires "hector_sensors_description" package)-->
+ 
+
+  <xacro:arg name="prefix" default=""/>
+
+  <!--ROS Control Plugin 
+   <gazebo>
+
+   <plugin name="gazebo_ros_control" filename="libgazebo_ros_control.so">
+      <robotNamespace>/$(arg prefix)</robotNamespace>
+      <robotSimType>gazebo_ros_control/DefaultRobotHWSim</robotSimType>
+   </plugin>
+
+   </gazebo>-->
+
+
+
+  <!-- base_footprint is a fictitious link(frame) that is on the ground right below the front part, navigation stack depends on this frame -->
+  <link name="$(arg prefix)base_footprint">
+  </link>
+
+  <!-- the base   VOORLOPIG de laser aan de voorkant (ook in controller aanpassen)-->
+  <nexus_body parent="$(arg prefix)base_footprint" rn="$(arg prefix)">
+    <origin xyz="0 0 0.0" rpy="0 0 3.14159265359" />
+  </nexus_body>
+
+  <!-- Laser scanner joint and link come here (uncomment this to use the RPlidar laser) DOESN'T WORK PERFECTLY -->
+  <!--<laser parent="$(arg prefix)base_footprint" rn="$(arg prefix)" topic="/$(arg prefix)hokuyo_points" hz="10" samples="360">
+    <origin xyz="0.08 0 0.15" rpy="3.14159265359 3.14159265359 0" />
+  </laser> -->
+
+  <!--(uncomment this to use the Hokuyo looking laser) -->
+   <hokuyo_utm30lx_model parent="$(arg prefix)base_footprint" name="$(arg prefix)hokuyo" topic="/$(arg prefix)/hokuyo_points" hz="10" samples="360">
+    <origin xyz="0 0 0.4" rpy="0 0 0" />
+  </hokuyo_utm30lx_model>
+
+
+</robot>

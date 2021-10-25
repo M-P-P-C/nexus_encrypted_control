@@ -1,0 +1,77 @@
+<?xml version="1.0"?>
+<robot name="base" xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:property name="M_PI" value="3.14159"/>
+  <xacro:property name="MESH_SCALE" value="100"/>
+
+  <xacro:macro name="nexus_body"  params="parent rn *oorsprong">
+
+   <joint name="${rn}base_footprint_joint" type="fixed">
+     <xacro:insert_block name="oorsprong" />
+     <parent link="${parent}"/>
+     <child link="${rn}the_base"/>
+     <dynamics damping="1.0" friction="1"/>
+   </joint>
+
+   <link name="${rn}the_base">
+       <visual>
+ 	       <origin xyz="0 0 0" rpy="0 0 0" />
+       	 <geometry>
+             <mesh filename="package://nexus/meshes/base-binary.stl"/>
+       	 </geometry>
+ 	       <material name="Yellow"/>
+       </visual>
+
+       <collision>
+         <origin xyz="0 0 0.05" rpy="0 0 0" />
+         <geometry>
+           <box size="0.425 0.375 0.1" />
+         </geometry>
+       </collision>
+
+       <inertial>
+         <mass value="20.0" />
+         <origin xyz="0 0 0" rpy="0 0 0" />
+         <inertia ixx="20.0" ixy="0.0" ixz="0.0"
+                  iyy="20.0" iyz="0.0" 
+                  izz="20.0" />
+       </inertial>
+            
+   </link>
+
+    <gazebo>
+      <!-- planar plugin is very simple, it wil ALWAYS force a speed, so if lifted, the object doesn't fall.
+	   but it works sort of...
+	   force_based exerts force and torque to a blob, works better.
+	  -->
+        <!--<plugin name="nexus_controller" filename="libgazebo_ros_force_based_move.so">-->
+        <plugin name="nexus_controller" filename="libgazebo_ros_planar_move.so">
+        	<commandTopic>${rn}/cmd_vel</commandTopic>
+                <commandTopic>${rn}/cmd_pose</commandTopic> 
+                <commandRate>1000.0</commandRate>
+        	<odometryTopic>odom</odometryTopic>
+        	<odometryFrame>odom</odometryFrame>
+        	<odometryRate>1000.0</odometryRate>
+        	<robotBaseFrame>${parent}</robotBaseFrame>
+      </plugin>
+    </gazebo>
+    
+    <gazebo reference="${rn}the_base">
+      <!-- Gazebo colour -->
+      <material>Gazebo/Yellow</material>
+      <turnGravityOff>false</turnGravityOff>
+      <mu1 value="1.0" />
+      <mu2 value="1.0" />
+      <kp value="1000000.0" />
+      <kd value="1.0" />
+    </gazebo>
+        
+    <gazebo reference="${rn}base_footprint_joint">
+      <stopKd value="1.0" />
+      <stopKp value="1000000.0" />
+      <fudgeFactor value="0.5" />
+    </gazebo>
+        
+
+  </xacro:macro>
+
+</robot>
