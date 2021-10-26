@@ -3,9 +3,9 @@
 	
   <arg name="N" default="4" />  <!--CHANGE THESE VALUES OF N TO CHANGE NUMBER OF NEXUS ROBOTS-->
 
-  <arg name="folderconfig" default="$(eval '$(find nexhom)config')" /> <!--CHANGE THESE TWO ARGUMENTS TO THEIR RESPECTIVE FOLDERS IF REQUIRED-->
-  <arg name="folderlaunch" default="$(eval '$(find nexhom)launch')" />
-  <arg name="foldergaz" default="$(eval '$(find nexhom)gazebo')" />
+  <arg name="folderconfig" default="$(eval '$(find nexus_encrypted_control)config')" /> <!--CHANGE THESE TWO ARGUMENTS TO THEIR RESPECTIVE FOLDERS IF REQUIRED-->
+  <arg name="folderlaunch" default="$(eval '$(find nexus_encrypted_control)launch')" />
+  <arg name="foldergaz" default="$(eval '$(find nexus_encrypted_control)gazebo')" />
 
   <arg name="sim" default="true" />
   <arg name="Ntotal" default="$(arg N)" /> 

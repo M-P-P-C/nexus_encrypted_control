@@ -1,9 +1,9 @@
 <?xml version="1.0"?>
 <package format="2">
-  <name>nexhom</name>
+  <name>nexus_encrypted_control</name>
   <version>0.0.0</version>
   <description>
-  The nexhom package is used to control a formation of Nexus robots at the DTPA lab
+  The nexus_encrypted_control package is used to control a formation of Nexus robots at the DTPA lab
   using Homomorphic Encryption
   </description>
 

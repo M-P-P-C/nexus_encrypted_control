@@ -2,7 +2,7 @@
 
 #REMEMBER to set the proper amount of N robots below
 
-PACKAGEuser="nexhom"       #CHANGE THIS VARIABLE TO NAME OF PACKAGE
+PACKAGEuser="nexus_encrypted_control"       #CHANGE THIS VARIABLE TO NAME OF PACKAGE
 
 echo
 

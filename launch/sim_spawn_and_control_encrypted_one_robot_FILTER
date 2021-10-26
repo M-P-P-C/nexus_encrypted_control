@@ -2,7 +2,7 @@
 
 #REMEMBER to set the proper amount of N within N_nexus.launch and add the new spawn robots in N_world.launch
 
-PACKAGEuser="nexhom"       #CHANGE THIS VARIABLE TO NAME OF PACKAGE
+PACKAGEuser="nexus_encrypted_control"       #CHANGE THIS VARIABLE TO NAME OF PACKAGE
 
 echo
 
