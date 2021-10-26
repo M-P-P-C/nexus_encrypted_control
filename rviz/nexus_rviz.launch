@@ -1,0 +1,95 @@
+<launch>
+
+  <!-- Launch the arbotix driver in fake mode by default -->
+  <arg name="sim" default="true" />
+  <arg name="1" default="n_1" />
+  <arg name="2" default="n_2" />
+  <arg name="3" default="n_3" />
+  <arg name="4" default="n_4" />
+  <!-- these are the arguments you can pass this launch file, for example paused:=true -->
+  
+
+  <param name="/use_sim_time" value="false" />
+
+
+  <!-- If using the real controllers -->
+  <arg name="nexusport" default="/dev/ttyUSB.nexus" />
+  <arg name="armport" default="/dev/ttyUSB.arm" />
+
+
+  <!-- ROBOTS: each group launches one the robot_base_multiple. xacro file and one_nexus_laser.launch file -->
+
+  <group ns="$(arg 1)">
+    <param name="robot_description"
+       command="$(find xacro)/xacro --inorder '$(find multidescription)/urdf/robot_base_multiple.xacro' prefix:=$(arg 1)" />
+    <include file="/home/mariano/catkin_ws/src/nexus/launch/one_nexus_laser.launch" >  
+      <arg name="robot_name"  value="$(arg 1)" />
+      <arg name="nexusport" value="$(arg nexusport)" />
+      <arg name="sim"  value="$(arg sim)" />
+    </include>
+  </group>
+
+  <group ns="$(arg 2)">
+    <param name="robot_description"
+    command="$(find xacro)/xacro --inorder '$(find multidescription)/urdf/robot_base_multiple.xacro' prefix:=$(arg 2)" />
+    <include file="/home/mariano/catkin_ws/src/nexus/launch/one_nexus_laser.launch" >  
+      <arg name="robot_name"  value="$(arg 2)" />
+      <arg name="nexusport" value="$(arg nexusport)" />
+      <arg name="sim"  value="$(arg sim)" />
+    </include>
+  </group>
+
+  <group ns="$(arg 3)">
+    <param name="robot_description"
+    command="$(find xacro)/xacro --inorder '$(find multidescription)/urdf/robot_base_multiple.xacro' prefix:=$(arg 3)" />
+    <include file="/home/mariano/catkin_ws/src/nexus/launch/one_nexus_laser.launch" >  
+      <arg name="robot_name"  value="$(arg 3)" />
+      <arg name="nexusport" value="$(arg nexusport)" />
+      <arg name="sim"  value="$(arg sim)" />
+    </include>
+  </group>
+
+  <group ns="$(arg 4)">
+     <param name="robot_description"
+    command="$(find xacro)/xacro --inorder '$(find multidescription)/urdf/robot_base_multiple.xacro' prefix:=$(arg 4)" />
+    <include file="/home/mariano/catkin_ws/src/nexus/launch/one_nexus_laser.launch" >  
+      <arg name="robot_name"  value="$(arg 4)" />
+      <arg name="nexusport" value="$(arg nexusport)" />
+      <arg name="sim"  value="$(arg sim)" />
+    </include>
+  </group>
+
+
+  <!-- send fake joint values -->
+
+
+  <!-- spawn Joysticks for each robot -->
+  <node name="arbotix_gui1" pkg="arbotix_python" type="arbotix_gui"
+	respawn="false" output="screen">
+    <remap from="/cmd_vel" to="/n_1/cmd_vel" />
+  </node>
+
+  <!-- convert joint states to TF transforms for rviz, etc -->
+  <node name="arbotix_gui2" pkg="arbotix_python" type="arbotix_gui"
+	respawn="false" output="screen">
+    <remap from="/cmd_vel" to="/n_2/cmd_vel" />
+  </node>
+
+  <!-- convert joint states to TF transforms for rviz, etc -->
+  <node name="arbotix_gui3" pkg="arbotix_python" type="arbotix_gui"
+	respawn="false" output="screen">
+    <remap from="/cmd_vel" to="/n_3/cmd_vel" />
+  </node>
+
+  <!-- convert joint states to TF transforms for rviz, etc -->
+  <node name="arbotix_gui4" pkg="arbotix_python" type="arbotix_gui"
+	respawn="false" output="screen">
+    <remap from="/cmd_vel" to="/n_4/cmd_vel" />
+  </node>
+
+
+
+  <!-- Show in Rviz   -->
+  <node name="rviz" pkg="rviz" type="rviz" args="-d $(find multidescription)/launch/nexus.rviz"/>
+
+ </launch>

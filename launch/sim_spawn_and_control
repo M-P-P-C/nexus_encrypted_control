@@ -1,0 +1,35 @@
+#!/bin/sh
+
+#REMEMBER to set the proper amount of N within N_nexus.launch and add the new spawn robots in N_world.launch
+
+PACKAGEuser="nexhom"       #CHANGE THIS VARIABLE TO NAME OF PACKAGE
+
+
+echo "\nNOW EXECUTING SCRIPTS FROM THE PACKAGE: $PACKAGEuser \n \nWILL NOW SIMULATE THE NEXUS ROBOTS AND CONTROL THEM WITHOUT ENCRYPTION \n"
+
+
+roslaunch $PACKAGEuser N_nexus.launch&
+
+#sleep 10
+
+#roslaunch $PACKAGEuser N_world.launch&
+
+sleep 10
+
+for i in 1 2 3 4     #add new values here depending on N amount of robots
+
+ do 
+
+  echo $i &
+
+  rosrun $PACKAGEuser dataprocessingnode_N.py "$i" &
+
+  rosrun $PACKAGEuser controller_N.py "$i" &
+
+ done
+
+echo
+echo "Press Ctrl-C to terminate"
+echo
+
+wait

@@ -1,0 +1,162 @@
+#!/bin/bash
+
+#REMEMBER to set the proper amount of N robots below
+
+PACKAGEuser="nexhom"       #CHANGE THIS VARIABLE TO NAME OF PACKAGE
+
+echo
+
+echo NOW EXECUTING SCRIPTS FROM THE PACKAGE: $PACKAGEuser
+
+echo
+
+roslaunch $PACKAGEuser N_nexus.launch N:=3 &        #The N here tells the roslaunch file how many robots to spawn
+
+set --
+
+sleep 10
+
+echo
+echo "Launching Data Processing Node"
+echo
+
+for i in 1 2 3   #add new values here depending on N amount of robots
+
+ do 
+
+  #echo $i &
+
+  xterm -e rosrun $PACKAGEuser dataprocessingnode_N.py "$i" &
+
+  sleep 2
+
+  set -- "$@" "$!"
+
+done
+
+sleep 2
+
+echo
+echo "Launching Encryption"
+echo
+
+for i in 1 2 3   #add new values here depending on N amount of robots
+
+ do 
+
+  #echo $i &
+
+  xterm -e rosrun $PACKAGEuser hom_enc2_est_v2_str.py "$i" &
+
+  #gnome-terminal -- bash -c "rosrun $PACKAGEuser hom_enc2_est_v2_str.py "$i"; exec bash" &
+  
+  sleep 1
+
+  set -- "$@" "$!"
+
+done
+  
+sleep 2
+
+echo
+echo "Launching Encrypted Controller"
+echo
+
+for i in 1 2 3   #add new values here depending on N amount of robots
+
+ do 
+
+  #echo $i &
+
+  xterm -e rosrun $PACKAGEuser controller_N_hom_encr_formation_est_v2_str.py "$i" &
+
+  #gnome-terminal -- bash -c "rosrun $PACKAGEuser controller_N_hom_encr_formation_est_v2_str.py "$i"; exec bash" &
+
+  sleep 1
+
+  set -- "$@" "$!"
+
+done
+
+sleep 2
+
+echo
+echo "Launching Decryption"
+echo
+
+for i in 1 2 3   #add new values here depending on N amount of robots
+
+ do 
+
+  #echo $i &
+
+  xterm -e rosrun $PACKAGEuser hom_dec2_est_v2_str.py "$i" &
+
+  #gnome-terminal -- bash -c "rosrun $PACKAGEuser hom_dec2_est_v2_str.py "$i"; exec bash" &
+
+  sleep 1
+
+  set -- "$@" "$!"
+
+done
+
+
+sleep 4
+
+
+kill -SIGINT "${12}" &
+
+kill -SIGINT "${11}" &
+
+kill -SIGINT "${10}" &
+
+sleep 0.2
+
+kill -SIGINT "$9" &
+
+kill -SIGINT "$8" &
+
+kill -SIGINT "$7" &
+
+sleep 0.2
+
+kill -SIGINT "$6" &
+
+kill -SIGINT "$5" &
+
+kill -SIGINT "$4" &
+
+sleep 0.2
+
+kill -SIGINT "$3" &
+
+kill -SIGINT "$2" &
+
+kill -SIGINT "$1" &
+
+sleep 1
+
+rosservice call /gazebo/reset_simulation "{}"
+
+#echo "Press 'r' to reset gazebo simulation"
+#count=0
+#while : ; do
+#read -n k <&1
+#  if [[ $k = r ]] ; then
+#    echo
+#    echo "Resetting Simulation"
+#    rosservice call /gazebo/reset_simulation "{}"
+#  else
+#    ((count=$count+1))
+#  fi
+#done
+
+echo
+echo "Press Ctrl-C to terminate"
+echo
+
+wait
+
+#in something goes wrong and ros didn't close then use "killall -9 rosmaster" and "killall -9 roscore"
+
+#to reset gazebo simulation without having to start and close use : " rosservice call /gazebo/reset_simulation "{}" "

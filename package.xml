@@ -1,0 +1,36 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>nexhom</name>
+  <version>0.0.0</version>
+  <description>
+  The nexhom package is used to control a formation of Nexus robots at the DTPA lab
+  using Homomorphic Encryption
+  </description>
+
+  <author>Mariano Perez Chaher</author>
+  <maintainer email="TODO@TODO.COM">Mariano Perez Chaher</maintainer>
+
+  <!-- One license tag required, multiple allowed, one license per tag -->
+  <!-- Commonly used license strings: -->
+  <!--   BSD, MIT, Boost Software License, GPLv2, GPLv3, LGPLv2.1, LGPLv3 -->
+  <license>TODO</license>
+
+
+  <url type="website">https://github.com/M-P-P-C/nexhom/tree/main</url>
+
+
+  <build_depend>rospy</build_depend>
+  <build_depend>std_msgs</build_depend>
+
+  <buildtool_depend>catkin</buildtool_depend>
+  <build_depend>rplidar_ros</build_depend>
+  <build_export_depend>rplidar_ros</build_export_depend>
+  <exec_depend>rplidar_ros</exec_depend>
+
+
+  <!-- The export tag contains other, unspecified, tags -->
+  <export>
+    <!-- Other tools can request additional information be placed here -->
+
+  </export>
+</package>

@@ -1,0 +1,75 @@
+<launch>
+
+	
+  <arg name="N" default="4" />  <!--CHANGE THESE VALUES OF N TO CHANGE NUMBER OF NEXUS ROBOTS-->
+
+  <arg name="folderconfig" default="$(eval '$(find nexhom)config')" /> <!--CHANGE THESE TWO ARGUMENTS TO THEIR RESPECTIVE FOLDERS IF REQUIRED-->
+  <arg name="folderlaunch" default="$(eval '$(find nexhom)launch')" />
+  <arg name="foldergaz" default="$(eval '$(find nexhom)gazebo')" />
+
+  <arg name="sim" default="true" />
+  <arg name="Ntotal" default="$(arg N)" /> 
+
+  <!-- these are the arguments you can pass this launch file, for example paused:=true -->
+  <arg name="paused" default="false"/>
+  <arg name="use_sim_time" default="true"/>
+  <arg name="gui" default="false"/>
+  <arg name="headless" default="false"/>
+  <arg name="debug" default="false"/>
+  <arg name="nexusport" default="/dev/ttyUSB.nexus" />
+  <arg name="armport" default="/dev/ttyUSB.arm" />
+  <arg name="pre" default="$(eval 'n_'+str(arg('N')))" />
+
+
+####LAUNCH NEXUS ROBOT####
+
+  <group ns="$(arg pre)">
+
+    <!-- Load the URDF into the ROS Parameter Server -->
+    <param name="robot_description" command="$(find xacro)/xacro --inorder '$(arg folderconfig)/robot/robot_base_multiple.xacro' prefix:=$(arg pre)" />
+    
+    <node name="nexus" pkg="nexus" type="nexus_driver" output="screen" clear_params="true">
+      <rosparam file="$(find nexus)/config/nexus.yaml" command="load" />
+      <param name="sim" value="$(arg sim)" />
+      <param name="port" value="$(arg nexusport)" />
+      <param name="namespace" value="$(arg pre)" />  <!-- for the frames --> 
+    </node>
+
+    <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher">
+      <param name="publish_frequency" type="double" value="20.0" />
+    </node>
+
+  </group>
+
+ 
+  <!-- start This launch file RECURSIVELY -->
+  <include file="$(arg folderlaunch)/N_nexus.launch" if="$(eval arg('N') - 1 > 0)">
+      <arg name="Ntotal" value="$(arg Ntotal)"/>
+      <arg name="N" value="$(eval arg('N') - 1)"/>
+  </include> 
+
+####GAZEBO LAUNCH#####
+
+  <!-- <arg name="msg" default="$(arg Ntotal)" />
+  <node name="pub_text" pkg="rostopic" type="rostopic"
+     args="pub /msg std_msgs/String '$(arg msg)'"
+     output="screen" />
+  <node name="print_text" pkg="rostopic" type="rostopic"
+     args="echo /msg" output="screen" /> -->
+
+
+  <!-- THIS LAST LINE LAUNCHES THE GAZEBO WORLD FILE FOR ALL ROBOTS -->
+  <include file="$(arg folderlaunch)/N_world.launch" if="$(eval arg('N') == 1)">
+      <arg name="N" value="$(arg Ntotal)"/>
+      <arg name="foldergaz" value="$(arg foldergaz)" />
+      <arg name="world_name" value="$(arg foldergaz)/worlds/nexus.world"/>
+      <arg name="debug" value="$(arg debug)" />
+      <arg name="gui" value="$(arg gui)" />
+      <arg name="paused" value="$(arg paused)"/>
+      <arg name="use_sim_time" value="$(arg use_sim_time)"/>
+      <arg name="headless" value="$(arg headless)"/>
+  </include>
+  
+
+
+</launch>
