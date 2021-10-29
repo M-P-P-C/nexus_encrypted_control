@@ -1,28 +1,36 @@
 <launch>
 
-	
-  <arg name="N" default="4" />  <!--CHANGE THESE VALUES OF N TO CHANGE NUMBER OF NEXUS ROBOTS-->
+####DEFINE ARGUMENTS####
 
-  <arg name="folderconfig" default="$(eval '$(find nexus_encrypted_control)config')" /> <!--CHANGE THESE TWO ARGUMENTS TO THEIR RESPECTIVE FOLDERS IF REQUIRED-->
+  <!--NUMBER OF ROBOTS-->
+  <arg name="N" default="4" />  
+
+  <!--FOLDER DIRECTORIES-->
+  <arg name="folderconfig" default="$(eval '$(find nexus_encrypted_control)config')" /> 
   <arg name="folderlaunch" default="$(eval '$(find nexus_encrypted_control)launch')" />
   <arg name="foldergaz" default="$(eval '$(find nexus_encrypted_control)gazebo')" />
 
-  <arg name="sim" default="true" />
-  <arg name="Ntotal" default="$(arg N)" /> 
-
-  <!-- these are the arguments you can pass this launch file, for example paused:=true -->
+  
+  <!-- these are the arguments you can pass to this launch file, for example paused:=true -->
+  <arg name="sim" default="true"/>
   <arg name="paused" default="false"/>
   <arg name="use_sim_time" default="true"/>
-  <arg name="gui" default="false"/>
+  <arg name="gui" default="true"/> <!--Show or not the Gazebo GUI-->
   <arg name="headless" default="false"/>
   <arg name="debug" default="false"/>
+
+  <!--Arguments for Nexus robots in the lab-->
   <arg name="nexusport" default="/dev/ttyUSB.nexus" />
   <arg name="armport" default="/dev/ttyUSB.arm" />
-  <arg name="pre" default="$(eval 'n_'+str(arg('N')))" />
+
+  <!--Arguments for N agents-->
+  <arg name="pre" default="$(eval 'n_'+str(arg('N')))" /> <!--determines the prefix to add to each initialized nexus agent (e.g. n_1)-->
+  <arg name="Ntotal" default="$(arg N)" /> <!--Used to recursively initialize agents-->
 
 
-####LAUNCH NEXUS ROBOT####
-
+####LAUNCH NEXUS ROBOTS####
+  
+  <!-- Initialize each agents' nodes and parameters-->
   <group ns="$(arg pre)">
 
     <!-- Load the URDF into the ROS Parameter Server -->
@@ -42,7 +50,7 @@
   </group>
 
  
-  <!-- start This launch file RECURSIVELY -->
+  <!-- Recursively call N_nexus.launch to start as many robots as the arg "N" says -->
   <include file="$(arg folderlaunch)/N_nexus.launch" if="$(eval arg('N') - 1 > 0)">
       <arg name="Ntotal" value="$(arg Ntotal)"/>
       <arg name="N" value="$(eval arg('N') - 1)"/>
@@ -50,16 +58,8 @@
 
 ####GAZEBO LAUNCH#####
 
-  <!-- <arg name="msg" default="$(arg Ntotal)" />
-  <node name="pub_text" pkg="rostopic" type="rostopic"
-     args="pub /msg std_msgs/String '$(arg msg)'"
-     output="screen" />
-  <node name="print_text" pkg="rostopic" type="rostopic"
-     args="echo /msg" output="screen" /> -->
-
-
-  <!-- THIS LAST LINE LAUNCHES THE GAZEBO WORLD FILE FOR ALL ROBOTS -->
-  <include file="$(arg folderlaunch)/N_world.launch" if="$(eval arg('N') == 1)">
+  <!-- THIS LAUNCHES THE GAZEBO WORLD FILE FOR ALL ROBOTS -->
+  <include file="$(arg folderlaunch)/Spawn_N_agents_gazebo.launch" if="$(eval arg('N') == 1)">
       <arg name="N" value="$(arg Ntotal)"/>
       <arg name="foldergaz" value="$(arg foldergaz)" />
       <arg name="world_name" value="$(arg foldergaz)/worlds/nexus.world"/>
