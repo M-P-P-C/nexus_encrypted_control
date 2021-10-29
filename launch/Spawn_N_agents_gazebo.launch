@@ -1,0 +1,84 @@
+<launch>
+
+<!-- THIS LAUNCH FILE IS CALLED FROM N_nexus.launch AND IS USED TO SPAWN THE N ROBOTS IN GAZEBO-->
+
+<!-- there is no need to change arguments here, they are all defined in N_nexus.launch -->
+
+  <arg name="sim" default="true" />
+  <arg name="N" default="4" />  <!--THIS VALUE CHANGES TO DETERMINE THE NUMBER OF NEXUS ROBOTS SPAWNED-->
+  
+  <arg name="world_name" default="$(arg foldergaz)/worlds/nexus.world"/>
+  <arg name="debug" default="false" />
+  <arg name="gui" default="true" />
+  <arg name="paused" default="false"/>
+  <arg name="use_sim_time" default="true"/>
+  <arg name="headless" default="false"/>
+
+  <arg name="foldergaz" default="$(eval '$(find nexus_encrypted_control)gazebo')" />  <!--CHANGE THIS ARGUMENT TO ITS RESPECTIVE FOLDER IF REQUIRED-->
+
+  <!-- We resume the logic in empty_world.launch, changing only the name of the world to be launched -->
+  <include file="$(find gazebo_ros)/launch/empty_world.launch">
+    <arg name="world_name" default="$(arg world_name)"/>
+    <arg name="debug" default="$(arg debug)" />
+    <arg name="gui" default="$(arg gui)" />
+    <arg name="paused" default="$(arg paused)"/>
+    <arg name="use_sim_time" default="$(arg use_sim_time)"/>
+    <arg name="headless" default="$(arg headless)"/>
+  </include> 
+
+<!-- x 0.2588 -y 0.9659 -x 0.167 -y 1.1056 -->
+<!-- x 0.9659 -y 0.2588 -x 0.951 -y 0.309 -->
+<!--https://www.desmos.com/calculator/srwgzppqte-->
+
+<group if="$(eval arg('N')>=1)">
+  <node name="spawn_nexus_1" pkg="gazebo_ros" type="spawn_model" respawn="false" output="screen" args="-urdf -param n_1/robot_description -x -0 -y -0 -Y 0 -model nexus_1"/> 
+</group>
+
+<group if="$(eval arg('N')>=2)">
+  <node name="spawn_nexus_2" pkg="gazebo_ros" type="spawn_model" respawn="false" output="screen" args="-urdf -param n_2/robot_description -x 0.7071 -y 0.7281 -Y 0 -model nexus_2"/>  
+</group> 
+
+<group if="$(eval arg('N')>=3)">
+  <node name="spawn_nexus_3" pkg="gazebo_ros" type="spawn_model" respawn="false" output="screen" args="-urdf -param n_3/robot_description -x 0.9659 -y -0.2698 -Y 0 -model nexus_3"/> 
+</group>
+
+<group if="$(eval arg('N')>=4)">
+  <node name="spawn_nexus_4" pkg="gazebo_ros" type="spawn_model" respawn="false" output="screen" args="-urdf -param n_4/robot_description -x 0 -y -1 -Y 0 -model nexus_4" /> 
+</group>
+
+<group if="$(eval arg('N')>=5)">
+  <node name="spawn_nexus_5" pkg="gazebo_ros" type="spawn_model" respawn="false" output="screen" args="-urdf -param n_5/robot_description -x -1 -y -0.5 -Y 0 -model nexus_5" /> 
+</group>
+
+<group if="$(eval arg('N')>=6)">
+  <node  name="spawn_nexus_6" pkg="gazebo_ros" type="spawn_model" respawn="false" output="screen" args="-urdf -param n_6/robot_description -x -1 -y 0.5 -Y 0 -model nexus_6"/> 
+</group>
+
+<group if="$(eval arg('N')>=7)">
+  <node name="spawn_nexus_7" pkg="gazebo_ros" type="spawn_model" respawn="false" output="screen" args="-urdf -param n_7/robot_description -x 0 -y 1 -Y 0 -model nexus_7"/> 
+</group>
+
+<group if="$(eval arg('N')>=8)">
+  <node name="spawn_nexus_8" pkg="gazebo_ros" type="spawn_model" respawn="false" output="screen" args="-urdf -param n_8/robot_description -x 1 -y 1 -Y 0 -model nexus_8"/> 
+</group>
+
+
+
+
+  <!-- <node name="spawn_nexus_10" pkg="gazebo_ros" type="spawn_model" respawn="false" output="screen" args="-urdf -param n_10/robot_description -x 1.5 -y -1.5 -Y 0 -model nexus_9 "/>
+
+  <node name="spawn_nexus_11" pkg="gazebo_ros" type="spawn_model" respawn="false" output="screen" args="-urdf -param n_11/robot_description -x -1.5 -y 1.5 -Y 0 -model nexus_9"/>
+
+  <node name="spawn_nexus_12" pkg="gazebo_ros" type="spawn_model" respawn="false" output="screen" args="-urdf -param n_12/robot_description -x 1.5 -y 1.5 -Y 0 -model nexus_9"/>
+
+  <node name="spawn_nexus_13" pkg="gazebo_ros" type="spawn_model" respawn="false" output="screen" args="-urdf -param n_13/robot_description -x -2 -y -2 -Y 0 -model nexus_9"/>
+
+  <node name="spawn_nexus_14" pkg="gazebo_ros" type="spawn_model" respawn="false" output="screen" args="-urdf -param n_14/robot_description -x -2 -y -2 -Y 0 -model nexus_9"/> -->
+
+
+
+
+
+
+
+</launch>
