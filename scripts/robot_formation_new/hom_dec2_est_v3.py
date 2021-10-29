@@ -1,39 +1,30 @@
 #!/usr/bin/env python
 
 import sys
-import numpy as np
-import rospy
-from std_msgs.msg import Int64, Int64MultiArray, Float64MultiArray, String
-
-import csv
 import os
 
+import rospy
 import rospkg
-
+from std_msgs.msg import Int64, Float32, Float32MultiArray, String
 from geometry_msgs.msg import Twist
-from rospy_tutorials.msg import Floats
+
+import csv
+import numpy as np
+
+from pymomorphic3 import pymomorphic_py2 as pymh2
 
 
-from pymomorphic import pymorph
-
-
-
-
-class hom_decrypt:
+class Hom_decrypt:
     def __init__(self):    #The "self" structure replaces "env" from Kim's paper
         
+        # Get input argument and save it as a string (e.g. n_1)
+        self.name='n_'+str(int(sys.argv[1])) 
 
-        var = pymorph.variables_import()
+        self.my_key = pymh2.KEY(p = 10**13, L = 10**4, r=10**1, N = 5)
+
 
         self.DUMDUM = 1
 
-        self.p=var.p
-        self.L=var.L
-        self.q=var.q
-        self.r=var.r
-        self.N=var.N
-
-        self.sk = pymorph.key_import(int(sys.argv[1])) #get secret key
 
         self.time = np.float64([])
         self.time_log = np.array([])
@@ -42,33 +33,20 @@ class hom_decrypt:
         self.begin = np.float64([rospy.get_time()])
         self.mu_hat_log = []
         
-        #self.scal = 100000000 #scaling of numbers to get values smaller than 1
-
-        self.name='n_'+str(int(sys.argv[1]))
-
-        self.running = True
-
+        # Prepare shutdown
         rospy.on_shutdown(self.shutdown)
 
+        # Prepare publishers
+        self.pub = rospy.Publisher(self.name+'/cmd_vel', Twist, queue_size=1)
+        self.pub_mu = rospy.Publisher(self.name+'/mu_hat_dec', Float32, queue_size=1)
+
+        # Prepare subscribers
         rospy.Subscriber(self.name+'/scaling', Int64, self.scaling)
-
         rospy.Subscriber(self.name+'/scaling1', Int64, self.scal1_rec)
-
         rospy.Subscriber(self.name+'/mu_hat_enc', String, self.mu_rec)
-
         rospy.Subscriber(self.name+'/mu_hat_enc_tot', String, self.mu_rec_tot)
-
         rospy.Subscriber(self.name+'/cmd_vel_enc', String, self.Dec)
 
-
-
-
-
-
-        # prepare publisher
-        self.pub = rospy.Publisher(self.name+'/cmd_vel', Twist, queue_size=1)
-
-        self.pub_mu = rospy.Publisher(self.name+'/mu_hat_dec', Floats, queue_size=1)
 
         self.velocity = Twist()
 
@@ -82,14 +60,13 @@ class hom_decrypt:
         self.scal1 = data.data
 
 
-
     def mu_rec(self,data):
 
-        if self.running:
+        while not rospy.is_shutdown():
+
             mu = data.data
 
-            self.mu = pymorph.recvr_pub_ros_str(mu)
-
+            self.mu = pymh2.recvr_pub_ros_str(mu)
 
         else:
             self.shutdown() 
@@ -100,7 +77,7 @@ class hom_decrypt:
         #if self.running:
         xy_mu = data.data
 
-        self.xy_mu = pymorph.recvr_pub_ros_str(xy_mu)
+        self.xy_mu = pymh2.recvr_pub_ros_str(xy_mu)
 
         '''self.decr_mu = []
 
@@ -135,7 +112,7 @@ class hom_decrypt:
 
     def Dec(self, data):
 
-        if self.running:
+        if not rospy.is_shutdown():
             print("-------------------------------------------")
             print("Decryption of Nexus: "+str(int(sys.argv[1])))
 
@@ -147,30 +124,30 @@ class hom_decrypt:
             #for i in range(0, len(encr), sizevec):
             #    cc.append(list(encr[i:sizevec+i]))
 
-            cc = pymorph.recvr_pub_ros_str(encr)           
+            cc = pymh2.recvr_pub_ros_str(encr)           
 
 
             decr = []
 
             for c in cc:
-                plaintext = pymorph.dec_hom(self.p, self.L, self.sk, c)
+                plaintext = self.my_key.decrypt(c)
                 decr.append((float(plaintext[0][0])/self.scal))
 
             self.decr_mu = []
 
             for c in self.xy_mu:
-                plaintext = pymorph.dec_hom(self.p, self.L, self.sk, c)
-                self.decr_mu.append((float(plaintext[0])/(self.scal*1000))) #multiplied by 100 because of the multiplication done in the controller for DT
+                plaintext = self.my_key.decrypt(c)
+                self.decr_mu.append((float(plaintext[0])/(self.scal*1000))) #multiplied by 1000 because of the multiplication done in the controller for DT
 
 
 
             try:
                 for c in [self.mu]:
-                    plaintext = pymorph.dec_hom(self.p, self.L, self.sk, c)
+                    plaintext = self.my_key.decrypt(c)
                     self.mu_dec = (float(plaintext[0])/(1000))
             except:
                 for c in [self.mu]:
-                    plaintext = pymorph.dec_hom(self.p, self.L, self.sk, c)
+                    plaintext = self.my_key.decrypt(c)
                     self.mu_dec = (float(plaintext)/(1000))
        
         
@@ -270,7 +247,9 @@ class hom_decrypt:
 
     def shutdown(self):
         ''' Stop the robot when shutting down the controller_1 node '''
-        self.running = False
+
+        rospy.loginfo("Stopping Decryption_"+str(int(sys.argv[1]))+"...")
+
         self.velocity = Twist()
         self.pub.publish(self.velocity) #set velocity to 0 to avoid drift
 
@@ -291,22 +270,26 @@ class hom_decrypt:
                 #self.writer.writerow([self.z_log[1]])
                 self.writer.writerow(self.time_log)
 
-        print ("\n")
+        print("\n")
 
-        print ("-----------------------------------------")
+        print("-----------------------------------------")
 
-        print ("Velocity of Agent set to 0"+"\n")
+        print("Velocity of Agent set to 0\n")
         
-        rospy.loginfo("Stopping Decryption_"+str(int(sys.argv[1]))+"...")
         
-        #print "decryption stopped"
-        
+        rospy.loginfo('Shutting Down')
         rospy.sleep(1)
 
 if __name__ == '__main__':
-    rospy.init_node('dec_'+str(int(sys.argv[1])), anonymous=False)
-    r = rospy.Rate(10)
-    hom_decrypt()
-    print "Decryption Working"
-    rospy.spin() 
+    
+    try:
+        rospy.init_node('dec_'+str(int(sys.argv[1])), anonymous=False)
+        r = rospy.Rate(10)
+        Hom_decrypt()
+        rospy.loginfo("Decryption Working")
+        rospy.spin() 
+        
+    except rospy.ROSInterruptException:
+        rospy.loginfo("Decryption node_"+str(int(sys.argv[1]))+" terminated.")  
+        pass
 

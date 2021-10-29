@@ -1,29 +1,26 @@
 #!/usr/bin/env python  
-import sys 
+
+import sys
+import os
+
 import rospy
-import matplotlib.pyplot as pl
-import numpy as np
-from rospy_tutorials.msg import Floats
-from std_msgs.msg import Int32, Int64MultiArray, String
-
-from std_msgs.msg import MultiArrayDimension
-
-
+import rospkg
+from std_msgs.msg import Int32, Int64MultiArray, String, MultiArrayDimension
 from rospy.numpy_msg import numpy_msg
 from geometry_msgs.msg import Twist
 
-import rospkg
-import csv #to read private key from csv file
-
-from pymomorphic import pymorph
-
+import numpy as np
+import matplotlib.pyplot as pl
 import operator
 from operator import add
 import csv
-import os
 
 
-class controller:
+from pymomorphic3 import pymomorphic_py2 as pymh2
+
+
+
+class Controller:
     ''' The controller uses the interagent distances to determine the desired velocity of the Nexus '''
 
     ''' NOTE: this script requires the dataprocessing node to be running first, as well as an input
@@ -35,21 +32,17 @@ class controller:
         '''
     
     def __init__(self):
-        loop=0
-        self.mu_hat_log =[]
-        self.DT_log =[]
+
+        # Get input argument and save it as a string (e.g. n_1)
+        self.name='n_'+str(int(sys.argv[1])) 
+
+        self.N = 5
+
+        self.my_op = pymh2.HOM_OP(p = 10**13, L = 10**4, r=10**1, N = self.N)
+
+        self.mu_hat = [0]*(self.N+1) #initialize with N+1 size
 
 
-        var = pymorph.variables_import()
-
-        self.p=var.p
-        self.L=var.L
-        self.q=var.q
-        self.r=var.r
-        self.N=var.N
-
-        ''' Initiate self and subscribe to /z_values topic '''
-        self.name='n_'+str(int(sys.argv[1]))
         # controller variables
         self.running = np.float32(1)
         self.d = int(0.8)
@@ -58,11 +51,6 @@ class controller:
         self.U_old = np.array([0, 0])
         self.U_oldd = np.array([0, 0])
 
-        self.sk = pymorph.key_import(int(sys.argv[1])) #This is here for debugging purposes, the controller should not need to access decrypted data
-
-        self.DT = 0.1 #(self.now-self.old)
-        self.FG_s = [[1, int(self.DT*1000)]] #CHECK HERE 
-        self.FG_s_enc =  pymorph.enc_2_mat(self.p, self.L, self.q, self.r, self.N, self.sk, self.FG_s) #THIS PROCESS SHOULD OCCUR IN THE ENCRYPTION SCRIPT
 
         # Motion parameters
         self.x_dot = np.float32(0)
@@ -93,35 +81,27 @@ class controller:
         self.old = np.float64([rospy.get_time()])
         self.begin = np.float64([rospy.get_time()])
         self.k = 0
+        loop=0
+        self.mu_hat_log =[]
+        self.DT_log =[]
 
-        self.mu_hat = [0]*(self.N+1) #initialize with N+1 size
         self.o = 1
         
 
-        # prepare shutdown
+        # Prepare shutdown
         rospy.on_shutdown(self.shutdown)
         
-        # prepare publisher
-        self.pub = rospy.Publisher(self.name+'/cmd_vel_enc', String, queue_size=1)
-        self.pub2 = rospy.Publisher(self.name+'/mu_hat_enc_tot', String, queue_size=1)
-        self.pub3 = rospy.Publisher(self.name+'/mu_hat_enc', String, queue_size=1)
+        # Prepare publishers
+        self.pub_controller = rospy.Publisher(self.name+'/cmd_vel_enc', String, queue_size=1)
+        self.pub_controller_estimator = rospy.Publisher(self.name+'/mu_hat_enc_tot', String, queue_size=1)
+        self.pub_mu = rospy.Publisher(self.name+'/mu_hat_enc', String, queue_size=1)
 
-        self.velocity = Twist()
-                
-        # subscribe to z_values topic
-        #rospy.Subscriber(self.name+'/encrypted_data', Int64MultiArray, self.controller)
-        #rospy.Subscriber(self.name+'/agents', Int32, self.n)
-
-        rospy.Subscriber(self.name+'/enc_error', String, self.recover_error)
-        
-        rospy.Subscriber(self.name+'/enc_rec_z', String, self.recover_z)
-
-        rospy.Subscriber(self.name+'/enc_mu', String, self.recover_mu)
-
-        rospy.Subscriber(self.name+'/enc_x_and_y', String, self.controller)
-
-
-
+        # Prepare subscribers
+        rospy.Subscriber(self.name+'/enc_error', String, callback = self.recover_error)
+        rospy.Subscriber(self.name+'/enc_rec_z', String, callback = self.recover_z)
+        rospy.Subscriber(self.name+'/enc_mu', String, callback = self.recover_mu)
+        rospy.Subscriber(self.name+'/enc_dt', String, callback = self.recover_DT)
+        rospy.Subscriber(self.name+'/enc_x_and_y', String, callback = self.controller)
 
         # subscribe to controller_variables
         #rospy.Subscriber('/controller_variables', numpy_msg(Floats), self.update_controller_variables)
@@ -132,27 +112,46 @@ class controller:
         self.n=data.data
 
 
-    def recover_error(self, data): 
-        e = data.data
-        self.e2 = pymorph.recvr_pub_ros_str(e)
+    def recover_error(self, data):
+        
+        while not rospy.is_shutdown():
+            e = data.data
+            self.e2 = pymh2.recvr_pub_ros_str(e)
+        else:
+            self.shutdown
 
         
     def recover_z(self, data): 
-        z =data.data
-        self.z2 = pymorph.recvr_pub_ros_str(z)
+
+        while not rospy.is_shutdown():
+            z =data.data
+            self.z2 = pymh2.recvr_pub_ros_str(z)
+        else:
+            self.shutdown
 
     def recover_mu(self, data): 
-        mu=data.data
-        self.mu2 = pymorph.recvr_pub_ros_str(mu)
+
+        while not rospy.is_shutdown():
+            mu=data.data
+            self.mu2 = pymh2.recvr_pub_ros_str(mu)
+        else:
+            self.shutdown
 
         #print "PRINTING MULTIPILICATION CONTROLLER: " + str([self.mu_hat, self.mu2[0]])
         
+    def recover_DT(self, data): 
 
+        while not rospy.is_shutdown():
+            DT_arr =data.data
+            self.FG_s_enc = pymh2.recvr_pub_ros_str(DT_arr)
+        else:
+            self.shutdown
 
 
     def update_controller_variables(self, data):
         ''' Update controller variables '''
-        if self.running < 10:
+
+        while not rospy.is_shutdown():
             # Assign data 
             self.controller_variables = data.data
 
@@ -178,14 +177,17 @@ class controller:
         
     def controller(self, data):
         ''' Calculate U based on z_values and save error velocity in log arrays '''    
-        if self.pub2.get_num_connections() > 0:#self.running < 10:
+        
+        # self.pub_controller_estimator.get_num_connections() > 0
+
+        if not rospy.is_shutdown():
             # Input for controller
 
-            print("-------------------------------------------")
-            print("Controller of Nexus: "+str(int(sys.argv[1])))
+            rospy.loginfo("-------------------------------------------")
+            rospy.loginfo("Controller of Nexus: %s", int(sys.argv[1]))
 
             xy=data.data
-            self.xy = pymorph.recvr_pub_ros_str(xy)
+            self.xy = pymh2.recvr_pub_ros_str(xy)
             #z_values= data.data
             #sizevec = data.layout.dim[1].size #size of each vector
 
@@ -221,11 +223,10 @@ class controller:
             
             
             self.now = np.float64([rospy.get_time()])
-            print "ACTUAL TIME BETWEEN RUNS: " + str(self.now-self.old) + " vs set DT: " + str(self.DT) 
-            print "\n"
+
 
             
-            self.mu_hat = pymorph.hom_mul_mat(self.q, self.N, self.FG_s_enc, [self.mu_hat, self.mu2[0]])[0]
+            self.mu_hat = self.my_op.hom_mul_mat(self.FG_s_enc, [self.mu_hat, self.mu2[0]])[0]
 
 
 
@@ -354,8 +355,8 @@ class controller:
             #xy_by_mu = pymorph.hom_mul_mat(self.q, self.N, self.xy, [self.mu_hat, filler])
             #xy_by_mu_x = pymorph.hom_mul_mat(self.q, self.N, [[self.xy[0][0]]], [self.mu_hat])
             #xy_by_mu_y = pymorph.hom_mul_mat(self.q, self.N, [[self.xy[1][0]]], [self.mu_hat])
-            xy_by_mu_x = pymorph.hom_mul(self.q, [self.mu_hat], [self.xy[0][0]])
-            xy_by_mu_y = pymorph.hom_mul(self.q, [self.mu_hat], [self.xy[1][0]])
+            xy_by_mu_x = self.my_op.hom_multiply([self.mu_hat], [self.xy[0][0]])
+            xy_by_mu_y = self.my_op.hom_multiply([self.mu_hat], [self.xy[1][0]])
             xy_by_mu = [xy_by_mu_x[0], xy_by_mu_y[0]]
 
             #if int(sys.argv[1]) == 3: #used to make the thrid agent also estimate the rogue one instead of the cyclical pattern
@@ -368,13 +369,13 @@ class controller:
 
             #print("XY_BY_MU within Controller: "+str(pymorph.dec_hom(self.p, self.L, self.sk, [xy_by_mu])))
 
-            xy_err = pymorph.hom_mul_mat(self.q, self.N, self.xy, self.e2)
+            xy_err = self.my_op.hom_mul_mat(self.xy, self.e2)
 
             #part1 = []
             #part2 = []
 
-            U2 = (pymorph.hom_mul(self.q, [xy_by_mu[0]] , self.z2[0])) #append the values for mu_hat
-            Y2 = (pymorph.hom_mul(self.q, [xy_by_mu[1]] , self.z2[0])) 
+            U2 = (self.my_op.hom_multiply([xy_by_mu[0]] , self.z2[0])) #append the values for mu_hat
+            Y2 = (self.my_op.hom_multiply([xy_by_mu[1]] , self.z2[0])) 
 
             #print("Estimator Velocities within Controller: "+str(pymorph.dec_hom(self.p, self.L, self.sk, [U2,Y2])))
 
@@ -399,8 +400,8 @@ class controller:
 
             #for i in range(self.n):
                 
-            U.append(pymorph.hom_mul(self.q, [xy_err[0]] , self.z2[0]))
-            Y.append(pymorph.hom_mul(self.q, [xy_err[1]] , self.z2[1]))
+            U.append(self.my_op.hom_multiply([xy_err[0]] , self.z2[0]))
+            Y.append(self.my_op.hom_multiply([xy_err[1]] , self.z2[1]))
 
                 #U2.append(pymorph.hom_mul(var.q, [xy_by_mu[0]] , self.z2[0][i])) #append the values for mu_hat
                 #Y2.append(pymorph.hom_mul(var.q, [xy_by_mu[1]] , self.z2[0][i]))
@@ -467,14 +468,14 @@ class controller:
             #print self.Hom_mul([self.Hom_mul([list(BbDz[0][0])], [list(Dzt.astype(int))])], [list((Ed.astype(int)))])
 
                         
-            mu_str = pymorph.prep_pub_ros_str(self.mu_hat)
-            self.pub3.publish(String(mu_str))
+            mu_str = pymh2.prep_pub_ros_str(self.mu_hat)
+            self.pub_mu.publish(String(mu_str))
 
-            Z_str = pymorph.prep_pub_ros_str(Z) #Publishes the first element of the controller
-            self.pub.publish(String(Z_str))
+            Z_str = pymh2.prep_pub_ros_str(Z) #Publishes the first element of the controller
+            self.pub_controller.publish(String(Z_str))
 
-            Z2_str = pymorph.prep_pub_ros_str(Z2) #Publishes the estimating element of the controller
-            self.pub2.publish(String(Z2_str))
+            Z2_str = pymh2.prep_pub_ros_str(Z2) #Publishes the estimating element of the controller
+            self.pub_controller_estimator.publish(String(Z2_str))
 
             self.now = np.float64([rospy.get_time()])
             self.time = np.float64([self.now-self.begin])
@@ -497,37 +498,31 @@ class controller:
             #    self.writer.writerow(self.mu_hat_log)
             #    self.writer.writerow(self.DT_log)
 
-            # publish
-            #self.publish_control_inputs(self.tosend) #THIS IS NOT THE PUBLISHING FUNCTION
-            
-            #A=self.n
-        elif 10 < self.running < 1000:
+
+        else:
             self.shutdown()
 
 
     def shutdown(self):
         ''' Stop the robot when shutting down the controller_1 node '''
         rospy.loginfo("Stopping Encrypted_Controller_"+str(int(sys.argv[1]))+"...")
-        self.running = np.float32(10000)
-        #self.velocity = Twist()
-        self.tosend = String()
-        self.pub.publish(self.tosend)
+
+        rospy.loginfo('Shutting Down')
         rospy.sleep(1)
 
 
-
-
-
-
-
 if __name__ == '__main__':
+    
     try:
         rospy.init_node('controller_enc_'+str(int(sys.argv[1])), anonymous=False)
         r = rospy.Rate(10)
-        controller()
-        print "Cloud Processing Working"
+        Controller()
+        rospy.loginfo("Cloud Processing Working")
         rospy.spin()
-    except:
+        
+    except rospy.ROSInterruptException:
         rospy.loginfo("Controller node_"+str(int(sys.argv[1]))+" terminated.")  
+        pass
+        
 
 

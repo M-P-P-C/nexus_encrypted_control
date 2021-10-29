@@ -7,7 +7,7 @@ import os
 
 import rospy
 import rospkg
-from std_msgs.msg import Int32, Float32				
+from std_msgs.msg import Int32, Float32MultiArray
 from rospy.numpy_msg import numpy_msg
 from sensor_msgs.msg import LaserScan
 
@@ -28,7 +28,7 @@ class Determine_z_values:
     
     Laser scanner angle zero is in the backward direction wrt the robot as used here.
     We use angles (0:360) as follows:
-    
+
     '''
   
     def __init__(self):
@@ -62,7 +62,7 @@ class Determine_z_values:
         rospy.on_shutdown(self.shutdown)
                         
         # Prepare publishers
-        self.pub_z_val = rospy.Publisher(self.name +'/z_values', numpy_msg(Float32), queue_size=1) #Publish the distances and angles to neighboring agents
+        self.pub_z_val = rospy.Publisher(self.name +'/z_values', numpy_msg(Float32MultiArray), queue_size=1) #Publish the distances and angles to neighboring agents
         self.pub_n = rospy.Publisher(self.name +'/agents', Int32 , queue_size=1) #Publish the amount of neighboring agents
         
         # Prepare subscribers
@@ -212,10 +212,13 @@ class Determine_z_values:
             #                          self.zn_X[1], self.zx[1], self.zy[1], \
             #                          self.zn_X[2], self.zx[2], self.zy[2]], dtype=np.float32)
 
-            
+            #Set z_values into Float32MultiArray so ROS may publish it
+            self.z_values_multiarray = Float32MultiArray()
+            self.z_values_multiarray.data = self.z_values
+
             #Publish data
             self.pub_n.publish(n)
-            self.pub_z_val.publish(self.z_values)
+            self.pub_z_val.publish(self.z_values_multiarray)
 
             #Logs and Time variables
             self.now = np.float64([rospy.get_time()])
@@ -228,14 +231,13 @@ class Determine_z_values:
 
         else:
             self.shutdown()
+            
 
     
     def shutdown(self):
         """ Setting z = d in order to stop the robots from moving when shutting down the dataprocessingnode """
 
         rospy.loginfo("Stopping dataprocessingnode_"+str(int(sys.argv[1]))+"...")
-        
-        self.running = False
 
         self.z_values = np.array([self.d, self.d, 0, \
                                   self.dd, self.dd, 0, \
