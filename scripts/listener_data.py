@@ -1,5 +1,8 @@
 #!/usr/bin/env python
 
+"""
+This script should launch a node that can subscribe to any publishing topic in order to save it's data to plot later.
+"""
 import rospy
 from std_msgs.msg import String
 from rospy_tutorials.msg import Floats
