@@ -13,7 +13,7 @@ import csv #to read private key from csv file
 import copy
 import random
 
-from pymomorphic3 import pymomorphic_py2 as pymh2
+from pymomorphic3 import pymomorphic_py2 as pymh2 #Change to pymomorphic_py3 to use with python3
 
 
 #CHECK A ROBOT INDIVIDUALLY FOR ERRORS IN CALCULATIONS DUE TO LOST MEMORY USING PYMOMORPHIC
@@ -34,7 +34,12 @@ class Hom_encrypt:
             self.d = 0.8 #Change desired distance for an agent for estimator
 
         # Initialize encryption
-        self.my_key = pymh2.KEY(p = 10**13, L = 10**4, r=10**1, N = 5)
+        self.p_enc = 10**13
+        self.L_enc = 10**4
+        self.r_enc = 10**1   #Error Injection
+        self.N_enc = 5       #Key Length
+
+        self.my_key = pymh2.KEY(self.p_enc, self.L_enc, self.r_enc, self.N_enc)
 
         self.o=1
 
@@ -66,6 +71,10 @@ class Hom_encrypt:
         self.pub_DT = rospy.Publisher(self.name+'/enc_dt', String, queue_size=1)
         self.pub_scal = rospy.Publisher(self.name+'/scaling', Int64, queue_size=1)
         self.pub_scal1 = rospy.Publisher(self.name+'/scaling1', Int64, queue_size=1)
+        self.pub_encryption_variables = rospy.Publisher(self.name+'/encryption_vars', String, queue_size=1)
+        self.pub_secret_key = rospy.Publisher(self.name+'/secret_key', String, queue_size=1) #secret_key for decryption script (encryption and decryption should occur in the same script to avoid this)
+
+
 
         # Prepare subscribers
         rospy.Subscriber(self.name+'/mu_hat_dec', Float32, callback = self.mu_dec_callback)
@@ -212,8 +221,14 @@ class Hom_encrypt:
 
             self.pub_e.publish(String(error_topub))
 
+            # Publish encryption variables
+            encryption_vars_topub = pymh2.prep_pub_ros_str([self.p_enc, self.L_enc, self.r_enc, self.N_enc])
+            self.pub_encryption_variables.publish(encryption_vars_topub)
 
-
+            # Publish secret_key for decryption
+            secret_key_topub = pymh2.prep_pub_ros_str(self.my_key.secret_key.tolist())
+            self.pub_secret_key.publish(secret_key_topub)
+            
             # Publish reciprocal of z
             zr_ciph = [[]]*robots
             
@@ -238,16 +253,17 @@ class Hom_encrypt:
             
             self.pub_xy.publish(String(x_y_enc_topub))
             
+
             # Publish DT array
             self.pub_DT.publish(self.FG_s_enc_str)
 
 
-            #Time variables
+            # Update Time variables
             self.now = np.float64([rospy.get_time()])
             '''self.time = np.float64([self.now-self.begin])
             self.time_log = np.append(self.time_log, self.time)'''
             print_time= self.now-self.old
-            rospy.loginfo("Time between runs: %s", print_time) #Creates stuttering in the printing on the console
+            #rospy.loginfo("Time between runs: %s", print_time) #Creates stuttering in the printing on the console
             self.old = self.now
 		
 

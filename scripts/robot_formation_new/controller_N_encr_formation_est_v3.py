@@ -16,7 +16,7 @@ from operator import add
 import csv
 
 
-from pymomorphic3 import pymomorphic_py2 as pymh2
+from pymomorphic3 import pymomorphic_py2 as pymh2 #Change to pymomorphic_py3 to use with python3
 
 
 
@@ -26,7 +26,7 @@ class Controller:
     ''' NOTE: this script requires the dataprocessing node to be running first, as well as an input
         argument, an example of how to properly run this code in the terminal is as following:
         
-        rosrun lasmulticontrol3 dataprocessingnode_N.py "1" 
+        rosrun lasmulticontrol3 controller_N_encr_formation_est_v3.py "1" 
         
         where "1" is the value assigned to the robot
         '''
@@ -36,11 +36,6 @@ class Controller:
         # Get input argument and save it as a string (e.g. n_1)
         self.name='n_'+str(int(sys.argv[1])) 
 
-        self.N = 5
-
-        self.my_op = pymh2.HOM_OP(p = 10**13, L = 10**4, r=10**1, N = self.N)
-
-        self.mu_hat = [0]*(self.N+1) #initialize with N+1 size
 
 
         # controller variables
@@ -96,6 +91,9 @@ class Controller:
         self.pub_controller_estimator = rospy.Publisher(self.name+'/mu_hat_enc_tot', String, queue_size=1)
         self.pub_mu = rospy.Publisher(self.name+'/mu_hat_enc', String, queue_size=1)
 
+        # Initialize encrypted operator
+        self.enc_vars_subscriber = rospy.Subscriber(self.name+'/encryption_vars', String, callback = self.recover_encryption_vars)
+
         # Prepare subscribers
         rospy.Subscriber(self.name+'/enc_error', String, callback = self.recover_error)
         rospy.Subscriber(self.name+'/enc_rec_z', String, callback = self.recover_z)
@@ -108,50 +106,62 @@ class Controller:
 
 
     def n(self, data):   #This is used to extract the value of n (i.e. the number of robots the agent detected, published from the from the dataprocessor node)
+        
+        if not rospy.is_shutdown():
+            self.n = data.data
 
-        self.n=data.data
+    def recover_encryption_vars(self, data):
 
+        if not rospy.is_shutdown():
+            enc_vars = pymh2.recvr_pub_ros_str(data.data)
+            
+            p_enc = enc_vars[0]
+            L_enc = enc_vars[1]
+            r_enc = enc_vars[2]
+            N_enc = enc_vars[3]
+
+            self.my_op = pymh2.HOM_OP(p_enc, L_enc, r_enc, N_enc)
+
+            self.mu_hat = [0]*(N_enc+1) #initialize mu_hat with N+1 size
+
+            self.enc_vars_subscriber.unregister() #Once the data has been obtained the subscriber is stopped
 
     def recover_error(self, data):
         
-        while not rospy.is_shutdown():
+        if not rospy.is_shutdown():
             e = data.data
             self.e2 = pymh2.recvr_pub_ros_str(e)
-        else:
-            self.shutdown
+
 
         
     def recover_z(self, data): 
 
-        while not rospy.is_shutdown():
+        if not rospy.is_shutdown():
             z =data.data
             self.z2 = pymh2.recvr_pub_ros_str(z)
-        else:
-            self.shutdown
+
 
     def recover_mu(self, data): 
 
-        while not rospy.is_shutdown():
+        if not rospy.is_shutdown():
             mu=data.data
             self.mu2 = pymh2.recvr_pub_ros_str(mu)
-        else:
-            self.shutdown
+
 
         #print "PRINTING MULTIPILICATION CONTROLLER: " + str([self.mu_hat, self.mu2[0]])
         
     def recover_DT(self, data): 
 
-        while not rospy.is_shutdown():
+        if not rospy.is_shutdown():
             DT_arr =data.data
             self.FG_s_enc = pymh2.recvr_pub_ros_str(DT_arr)
-        else:
-            self.shutdown
+
 
 
     def update_controller_variables(self, data):
         ''' Update controller variables '''
 
-        while not rospy.is_shutdown():
+        if not rospy.is_shutdown():
             # Assign data 
             self.controller_variables = data.data
 

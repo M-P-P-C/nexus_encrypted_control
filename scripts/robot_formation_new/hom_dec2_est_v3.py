@@ -11,21 +11,17 @@ from geometry_msgs.msg import Twist
 import csv
 import numpy as np
 
-from pymomorphic3 import pymomorphic_py2 as pymh2
+from pymomorphic3 import pymomorphic_py2 as pymh2 #Change to pymomorphic_py3 to use with python3
 
 
 class Hom_decrypt:
-    def __init__(self):    #The "self" structure replaces "env" from Kim's paper
+
+    def __init__(self):
         
         # Get input argument and save it as a string (e.g. n_1)
         self.name='n_'+str(int(sys.argv[1])) 
 
-        self.my_key = pymh2.KEY(p = 10**13, L = 10**4, r=10**1, N = 5)
-
-
-        self.DUMDUM = 1
-
-
+        # Initialize some variables
         self.time = np.float64([])
         self.time_log = np.array([])
         self.now = np.float64([rospy.get_time()])
@@ -39,6 +35,10 @@ class Hom_decrypt:
         # Prepare publishers
         self.pub = rospy.Publisher(self.name+'/cmd_vel', Twist, queue_size=1)
         self.pub_mu = rospy.Publisher(self.name+'/mu_hat_dec', Float32, queue_size=1)
+
+        # Initialize decryption
+        self.secret_key_subscriber = rospy.Subscriber(self.name+'/secret_key', String, callback = self.recover_secret_key)
+        self.enc_vars_subscriber = rospy.Subscriber(self.name+'/encryption_vars', String, callback = self.recover_encryption_vars)
 
         # Prepare subscribers
         rospy.Subscriber(self.name+'/scaling', Int64, self.scaling)
@@ -59,6 +59,29 @@ class Hom_decrypt:
 
         self.scal1 = data.data
 
+    def recover_secret_key(self, data):
+
+        if not rospy.is_shutdown():
+            
+            self.secret_key = np.array(pymh2.recvr_pub_ros_str(data.data), dtype = object)
+            
+            self.secret_key_subscriber.unregister() #Once the data has been obtained the subscriber is stopped
+
+    def recover_encryption_vars(self, data):
+
+        if not rospy.is_shutdown():
+            enc_vars = pymh2.recvr_pub_ros_str(data.data)
+            
+            p_enc = enc_vars[0]
+            L_enc = enc_vars[1]
+            r_enc = enc_vars[2]
+            N_enc = enc_vars[3]
+
+            self.my_key = pymh2.KEY(p_enc, L_enc, r_enc, N_enc, secret_key_set = self.secret_key)
+
+            self.enc_vars_subscriber.unregister() #Once the data has been obtained the subscriber is stopped
+
+
 
     def mu_rec(self,data):
 
@@ -74,55 +97,23 @@ class Hom_decrypt:
 
     def mu_rec_tot(self,data):
 
-        #if self.running:
-        xy_mu = data.data
+        while not rospy.is_shutdown():
+            xy_mu = data.data
 
-        self.xy_mu = pymh2.recvr_pub_ros_str(xy_mu)
+            self.xy_mu = pymh2.recvr_pub_ros_str(xy_mu)
 
-        '''self.decr_mu = []
-
-        for c in self.xy_mu:
-            plaintext = pymorph.dec_hom(self.p, self.L, self.sk, c)
-            self.decr_mu.append(0.5*(float(plaintext[0])/(self.scal*100))) #multiplied by 100 because of the multiplication done in the controller for DT
-        
-        print ("FINAL VELOCITY X Before Limit: "+str(self.decr_mu[0]))  
-        print ("FINAL VELOCITY Y Before Limit: "+str(self.decr_mu[1])+"\n")
-
-        #print ("Decrypted Message: "+str(decr)+"\n")
-        v_max = 0.05
-        v_min = 0.005
-        for i in range(len(self.decr_mu)):          
-            if self.decr_mu[i] > v_max:
-                self.decr_mu[i] = v_max
-            elif self.decr_mu[i] < -v_max:
-                self.decr_mu[i] = -v_max
-            elif -v_min < self.decr_mu[i] < v_min:
-                self.decr_mu[i] = 0
-            #elif -v_min < decr[i]+self.U_old[i]+self.U_oldd[i] < v_min : # preventing shaking 
-            #    decr[i] = 0
-
-        
-        self.velocity.linear.x = self.decr_mu[0]
-        self.velocity.linear.y = self.decr_mu[1]
-
-        print ("FINAL VELOCITY X MU: "+str(self.decr_mu[0]))'''
-
-        #self.pub.publish(self.velocity)
+        else:
+            self.shutdown() 
 
 
     def Dec(self, data):
 
         if not rospy.is_shutdown():
-            print("-------------------------------------------")
-            print("Decryption of Nexus: "+str(int(sys.argv[1])))
+            rospy.loginfo("-------------------------------------------")
+            rospy.loginfo("Decryption of Nexus: "+str(int(sys.argv[1])))
 
             encr = data.data
 
-            #sizevec = data.layout.dim[0].size #size of each vector
-
-            #cc=[]
-            #for i in range(0, len(encr), sizevec):
-            #    cc.append(list(encr[i:sizevec+i]))
 
             cc = pymh2.recvr_pub_ros_str(encr)           
 
@@ -150,11 +141,9 @@ class Hom_decrypt:
                     plaintext = self.my_key.decrypt(c)
                     self.mu_dec = (float(plaintext)/(1000))
        
-        
 
-
-            #print ("Controller Velocity "+ str(decr))
-            #print ("Estimator Velocity: "+ str(self.decr_mu))
+            #rospy.loginfo("Controller Velocity "+ str(decr))
+            #rospy.loginfo("Estimator Velocity: "+ str(self.decr_mu))
 
             #if int(sys.argv[1]) == 1:
             #    self.decr_mu[0] = 0
@@ -189,11 +178,7 @@ class Hom_decrypt:
             #print decr
             #self.tosend.data = decr
 
-            
-            #print ("FINAL VELOCITY X Before Limit: "+str(decr[0]))
-            #print ("FINAL VELOCITY Y Before Limit: "+str(decr[1])+"\n")
 
-            #print ("Decrypted Message: "+str(decr)+"\n")
             v_max = 0.04
             v_min = 0.01 #lower than this results in weird jittering once agents converge
             for i in range(len(decr)):          
@@ -210,8 +195,13 @@ class Hom_decrypt:
             self.velocity.linear.x = decr[0]
             self.velocity.linear.y = decr[1]
 
+            # Publish velocity for nexus agent
             self.pub.publish(self.velocity) #the data is: [ANGLE, x dist, y dist]
-            self.pub_mu.publish([self.mu_dec]) 
+            
+            # Publish decrypted and downscaled mu_hat
+            self.pub_mu.publish(self.mu_dec) 
+            rospy.loginfo(self.mu_dec)
+            
 
             
             #print ("FINAL VELOCITY X: "+str(self.velocity.linear.x)+"\n")
@@ -221,24 +211,11 @@ class Hom_decrypt:
 
             self.now = np.float64([rospy.get_time()])
             self.time = np.float64([self.now-self.begin])
-            print(self.time)
+            #rospy.loginfo(self.time)
             self.time_log = np.append(self.time_log, self.time)
             self.old = self.now
 
-            self.mu_hat_log.append(self.mu_dec/self.scal)
 
-            '''rospack = rospkg.RosPack()
-            #PATH = os.path.dirname(os.path.abspath(__file__)) #This gets path from wherever the terminal used to launch the file was
-            PATH = rospack.get_path('nexhom') #This gets the path from the shown ROS package
-            FILEPATH = os.path.join(PATH+'/saved_variables', 'Decryption_'+self.name+'.csv')
-            with open(FILEPATH, "a") as output:
-                    
-                #np.savetxt(output, np.array([self.mu/self.scal]), delimiter=",")
-                #np.savetxt(output, np.array([self.mu/self.scal]), delimiter=",")
-
-                self.writer = csv.writer(output, delimiter=',')
-                self.writer.writerow([self.mu/self.scal])
-                self.writer.writerow(self.time)'''
                         
 
         else:
@@ -257,24 +234,11 @@ class Hom_decrypt:
         PATH = rospack.get_path('nexhom') #This gets the path from the shown ROS package
         FILEPATH = os.path.join(PATH+'/saved_variables', 'Decryption_'+self.name+'.csv')
 
+        rospy.loginfo("\n")
 
-        if self.DUMDUM == 1:
-            self.DUMDUM=2
-            with open(FILEPATH, "a") as output:
-                
-                #np.savetxt("err"+self.name+".csv", (np.asarray(self.E_log)), delimiter=",")
-                        
-                self.writer = csv.writer(output, delimiter=',')
-                self.writer.writerow(self.mu_hat_log)
-                #self.writer.writerow(list(z_values_old_noscal[:, 0]+0.8))
-                #self.writer.writerow([self.z_log[1]])
-                self.writer.writerow(self.time_log)
+        rospy.loginfo("-----------------------------------------")
 
-        print("\n")
-
-        print("-----------------------------------------")
-
-        print("Velocity of Agent set to 0\n")
+        rospy.loginfo("Velocity of Agent set to 0\n")
         
         
         rospy.loginfo('Shutting Down')
