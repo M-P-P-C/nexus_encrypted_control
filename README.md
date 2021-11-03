@@ -1,4 +1,4 @@
-# nexhom
+# nexhom_encrypted_control
 A ROS package that uses homomorphic encryption in the control a formation of robots for the DTPA lab at the University of Groningen
 
 # Installing
