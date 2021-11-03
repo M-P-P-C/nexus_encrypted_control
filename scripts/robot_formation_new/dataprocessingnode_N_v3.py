@@ -50,7 +50,7 @@ class Determine_z_values:
         self.d = np.float32(0.8)
 
         if int(sys.argv[1]) == 1: #Used to set an agent with a constant mismatch (for estimator)
-            self.d = np.float32(0.8)
+            self.d = np.float32(0.85)
 
         self.dd = np.float32(np.sqrt(np.square(self.d)+np.square(self.d))) #calculate diagonal for square formation
 
@@ -204,7 +204,7 @@ class Determine_z_values:
 
                 self.z_values= np.concatenate(Zval[:][:])
 
-            self.z_values=np.asarray(self.z_values,dtype=np.float32)  #Ensure that all numbers are type np_float (without it the publisher doesn't publish the proper values)
+            self.z_values=np.asarray(self.z_values, dtype=np.float32)  #Ensure that all numbers are type np_float (without it the publisher doesn't publish the proper values)
             #rospy.loginfo("Z_values as Published: "+str(self.z_values))
 
             #Example of z_values shape:
@@ -239,11 +239,17 @@ class Determine_z_values:
 
         rospy.loginfo("Stopping dataprocessingnode_"+str(int(sys.argv[1]))+"...")
 
+        #self.z_values = np.array([self.d, self.d, 0, \
+        #                          self.dd, self.dd, 0, \
+        #                          self.d, self.d, 0], dtype=np.float32)
+
         self.z_values = np.array([self.d, self.d, 0, \
-                                  self.dd, self.dd, 0, \
                                   self.d, self.d, 0], dtype=np.float32)
 
-        self.pub_z_val.publish(self.z_values)
+        self.z_values_multiarray = Float32MultiArray()
+        self.z_values_multiarray.data = self.z_values
+
+        self.pub_z_val.publish(self.z_values_multiarray)
 
         rospy.loginfo('Shutting Down')
         rospy.sleep(1)
@@ -256,6 +262,7 @@ if __name__ == '__main__':
         Determine_z_values()
         rospy.spin() 
     except rospy.ROSInterruptException:
+        rospy.loginfo("Dataprocessingnode_"+str(int(sys.argv[1]))+" terminated.")
         pass
 
 

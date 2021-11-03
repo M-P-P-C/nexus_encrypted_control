@@ -41,8 +41,8 @@ class Hom_decrypt:
         self.enc_vars_subscriber = rospy.Subscriber(self.name+'/encryption_vars', String, callback = self.recover_encryption_vars)
 
         # Prepare subscribers
-        rospy.Subscriber(self.name+'/scaling', Int64, self.scaling)
-        rospy.Subscriber(self.name+'/scaling1', Int64, self.scal1_rec)
+        rospy.Subscriber(self.name+'/scaling', String, self.scaling)
+        rospy.Subscriber(self.name+'/scaling_DT', Int64, self.scalDT_rec)
         rospy.Subscriber(self.name+'/mu_hat_enc', String, self.mu_rec)
         rospy.Subscriber(self.name+'/mu_hat_enc_tot', String, self.mu_rec_tot)
         rospy.Subscriber(self.name+'/cmd_vel_enc', String, self.Dec)
@@ -53,11 +53,12 @@ class Hom_decrypt:
 
     def scaling(self, data):
 
-        self.scal = data.data
+        scal = data.data
+        self.scaling_list = pymh2.recvr_pub_ros_str(scal)
     
-    def scal1_rec(self, data):
+    def scalDT_rec(self, data):
 
-        self.scal1 = data.data
+        self.scal_DT = data.data
 
     def recover_secret_key(self, data):
 
@@ -65,7 +66,7 @@ class Hom_decrypt:
             
             self.secret_key = np.array(pymh2.recvr_pub_ros_str(data.data), dtype = object)
             
-            self.secret_key_subscriber.unregister() #Once the data has been obtained the subscriber is stopped
+            #self.secret_key_subscriber.unregister() #Once the data has been obtained the subscriber is stopped
 
     def recover_encryption_vars(self, data):
 
@@ -85,122 +86,95 @@ class Hom_decrypt:
 
     def mu_rec(self,data):
 
-        while not rospy.is_shutdown():
+        if not rospy.is_shutdown():
 
             mu = data.data
 
             self.mu = pymh2.recvr_pub_ros_str(mu)
 
-        else:
-            self.shutdown() 
-
 
     def mu_rec_tot(self,data):
 
-        while not rospy.is_shutdown():
+        if not rospy.is_shutdown():
+
             xy_mu = data.data
 
             self.xy_mu = pymh2.recvr_pub_ros_str(xy_mu)
 
-        else:
-            self.shutdown() 
 
 
     def Dec(self, data):
 
         if not rospy.is_shutdown():
+
             rospy.loginfo("-------------------------------------------")
             rospy.loginfo("Decryption of Nexus: "+str(int(sys.argv[1])))
 
             encr = data.data
 
+            encrypted_data = pymh2.recvr_pub_ros_str(encr)           
 
-            cc = pymh2.recvr_pub_ros_str(encr)           
+            # Prepare the scaling values [scaling_error, scaling_x, scaling_z_reciprocal, scaling_DT, scaling_(err-mu)]
+            S = self.scaling_list[0]*self.scaling_list[1]*self.scaling_list[2]
+            S_mu = self.scaling_list[1]*self.scaling_list[2]*self.scaling_list[3]*self.scaling_list[4]
+            s1 = self.scaling_list[3]*self.scaling_list[4]
 
-
+            # Decrypt X and Y velocities
             decr = []
 
-            for c in cc:
+            for c in encrypted_data:
                 plaintext = self.my_key.decrypt(c)
-                decr.append((float(plaintext[0][0])/self.scal))
+                decr.append((float(plaintext[0])/S))
 
+            # Decrypt X and Y velocities of Estimating factor
             self.decr_mu = []
 
             for c in self.xy_mu:
                 plaintext = self.my_key.decrypt(c)
-                self.decr_mu.append((float(plaintext[0])/(self.scal*1000))) #multiplied by 1000 because of the multiplication done in the controller for DT
+                self.decr_mu.append((float(plaintext[0])/(S_mu))) #multiplied by self.scal_DT because of the multiplication done to DT
 
-
-
-            try:
-                for c in [self.mu]:
-                    plaintext = self.my_key.decrypt(c)
-                    self.mu_dec = (float(plaintext[0])/(1000))
-            except:
-                for c in [self.mu]:
-                    plaintext = self.my_key.decrypt(c)
-                    self.mu_dec = (float(plaintext)/(1000))
+            # Decrypt new mu to send to encryption node
+            for c in [self.mu]:
+                plaintext = self.my_key.decrypt(c)
+                self.mu_dec = (float(plaintext[0])/s1)
        
 
-            #rospy.loginfo("Controller Velocity "+ str(decr))
-            #rospy.loginfo("Estimator Velocity: "+ str(self.decr_mu))
 
             #if int(sys.argv[1]) == 1:
             #    self.decr_mu[0] = 0
             #    self.decr_mu[1] = 0
 
-            decr[0] = (decr[0] - self.decr_mu[0]) #Adding the estimated velocity and the controller velocity
-            decr[1] = (decr[1] - self.decr_mu[1])
+            final_velocity = [0, 0]
 
-            '''for c in cc:
-                s=0
-                s = sk[:]
-                
-                s.insert(0, 1)
+            final_velocity[0] = (decr[0] - self.decr_mu[0]) #Adding the estimated velocity and the controller velocity
+            final_velocity[1] = (decr[1] - self.decr_mu[1])
 
 
-                dot=[0]
-                aa = 1
-                dot[0] = [sum(i[0] * i[1] for i in zip(c,s))]
-                            
-                
-                #dot = [sum(i[0] * i[1] for i in zip(c, s))]  #dot multiplication of c and s
-
-                plain = self.Mod(dot[0], self.L*self.p)
-
-                plaintext = float(plain[0])/self.L
-
-                plaintext = int(round(plaintext))
-                #print(plaintext)
-                decr.append(float(plaintext)/self.scal)''' #PLAINTEXT must be turn into float otherwise it is an integer and does not provide decimals when divided
-
-            #self.tosend = Float64MultiArray() #store list into array that can be published for ROS
-            #print decr
-            #self.tosend.data = decr
-
+            rospy.loginfo("Final Velocity = Controller Velocity - Estimator Velocity")
+            rospy.loginfo("%s = %s - %s", str(['%.5f' % n for n in final_velocity]), str(['%.5f' % n for n in decr]), str(['%.5f' % n for n in self.decr_mu]))
+            rospy.loginfo("\n")
 
             v_max = 0.04
-            v_min = 0.01 #lower than this results in weird jittering once agents converge
+            v_min = 0.0001
             for i in range(len(decr)):          
-                if decr[i] > v_max:
-                    decr[i] = v_max
+                if final_velocity[i] > v_max:
+                    final_velocity[i] = v_max
                 elif decr[i] < -v_max:
-                    decr[i] = -v_max
+                    final_velocity[i] = -v_max
                 elif -v_min < decr[i] < v_min:
-                    decr[i] = 0
-                #elif -v_min < decr[i]+self.U_old[i]+self.U_oldd[i] < v_min : # preventing shaking 
-                #    decr[i] = 0
+                    final_velocity[i] = 0
 
             
-            self.velocity.linear.x = decr[0]
-            self.velocity.linear.y = decr[1]
+            self.velocity.linear.x = final_velocity[0]
+            self.velocity.linear.y = final_velocity[1]
+
+            # Publish decrypted and downscaled mu_hat
+            self.pub_mu.publish(self.mu_dec)
 
             # Publish velocity for nexus agent
             self.pub.publish(self.velocity) #the data is: [ANGLE, x dist, y dist]
             
-            # Publish decrypted and downscaled mu_hat
-            self.pub_mu.publish(self.mu_dec) 
-            rospy.loginfo(self.mu_dec)
+
             
 
             
@@ -214,9 +188,6 @@ class Hom_decrypt:
             #rospy.loginfo(self.time)
             self.time_log = np.append(self.time_log, self.time)
             self.old = self.now
-
-
-                        
 
         else:
             self.shutdown() 

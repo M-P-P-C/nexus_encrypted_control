@@ -5,14 +5,10 @@ import os
 
 import rospy
 import rospkg
-from std_msgs.msg import Int32, Int64MultiArray, String, MultiArrayDimension
+from std_msgs.msg import String
 from rospy.numpy_msg import numpy_msg
-from geometry_msgs.msg import Twist
 
 import numpy as np
-import matplotlib.pyplot as pl
-import operator
-from operator import add
 import csv
 
 
@@ -36,8 +32,6 @@ class Controller:
         # Get input argument and save it as a string (e.g. n_1)
         self.name='n_'+str(int(sys.argv[1])) 
 
-
-
         # controller variables
         self.running = np.float32(1)
         self.d = int(0.8)
@@ -47,7 +41,7 @@ class Controller:
         self.U_oldd = np.array([0, 0])
 
 
-        # Motion parameters
+        '''# Motion parameters
         self.x_dot = np.float32(0)
         self.y_dot = np.float32(0)
         self.r_dot = np.float32(0)
@@ -57,9 +51,8 @@ class Controller:
         self.mut_y = self.y_dot*np.array([1, 0, 0, 0, -1])
         self.mu_r = self.r_dot*np.array([-1, -1, 0, 1, -1])
         self.mut_r = self.r_dot*np.array([1, 1, 0, -1, 1])
-        
         self.mu = self.mu_x+self.mu_y+self.mu_r
-        self.mut = self.mut_x+self.mut_y+self.mut_r
+        self.mut = self.mut_x+self.mut_y+self.mut_r'''
                 
         # prepare Log arrays
         self.E1_log = np.array([])
@@ -70,17 +63,16 @@ class Controller:
         self.E6_log = np.array([])
         self.Un = np.float32([])
         self.U_log = np.array([])
+        self.k = 0
+        self.mu_hat_log =[]
+        self.DT_log =[]
+
+        # Prepare time variables
         self.time = np.float64([])
         self.time_log = np.array([])
         self.now = np.float64([rospy.get_time()])
         self.old = np.float64([rospy.get_time()])
         self.begin = np.float64([rospy.get_time()])
-        self.k = 0
-        loop=0
-        self.mu_hat_log =[]
-        self.DT_log =[]
-
-        self.o = 1
         
 
         # Prepare shutdown
@@ -100,6 +92,11 @@ class Controller:
         rospy.Subscriber(self.name+'/enc_mu', String, callback = self.recover_mu)
         rospy.Subscriber(self.name+'/enc_dt', String, callback = self.recover_DT)
         rospy.Subscriber(self.name+'/enc_x_and_y', String, callback = self.controller)
+
+        # Initialize Decryption for debugging
+        #'''
+        self.decrypt_init()
+        #'''
 
         # subscribe to controller_variables
         #rospy.Subscriber('/controller_variables', numpy_msg(Floats), self.update_controller_variables)
@@ -132,20 +129,19 @@ class Controller:
             e = data.data
             self.e2 = pymh2.recvr_pub_ros_str(e)
 
-
         
     def recover_z(self, data): 
 
         if not rospy.is_shutdown():
-            z =data.data
-            self.z2 = pymh2.recvr_pub_ros_str(z)
+            z = data.data
+            self.z_rec = pymh2.recvr_pub_ros_str(z)
 
 
     def recover_mu(self, data): 
 
         if not rospy.is_shutdown():
-            mu=data.data
-            self.mu2 = pymh2.recvr_pub_ros_str(mu)
+            mu = data.data
+            self.mu = pymh2.recvr_pub_ros_str(mu)
 
 
         #print "PRINTING MULTIPILICATION CONTROLLER: " + str([self.mu_hat, self.mu2[0]])
@@ -153,7 +149,7 @@ class Controller:
     def recover_DT(self, data): 
 
         if not rospy.is_shutdown():
-            DT_arr =data.data
+            DT_arr = data.data
             self.FG_s_enc = pymh2.recvr_pub_ros_str(DT_arr)
 
 
@@ -190,327 +186,64 @@ class Controller:
         
         # self.pub_controller_estimator.get_num_connections() > 0
 
-        if not rospy.is_shutdown():
-            # Input for controller
+        if self.pub_mu.get_num_connections() > 0: #To avoid the acumulation of operations on self.mu_hat we wait for the decryption to work
 
             rospy.loginfo("-------------------------------------------")
             rospy.loginfo("Controller of Nexus: %s", int(sys.argv[1]))
 
             xy=data.data
+            
             self.xy = pymh2.recvr_pub_ros_str(xy)
-            #z_values= data.data
-            #sizevec = data.layout.dim[1].size #size of each vector
 
-            #var = pymorph.variables_import() #variables used for encryption
+            # Calculate new mu_hat
+            self.mu_hat = self.my_op.hom_mul_mat(self.FG_s_enc, [self.mu_hat, self.mu[0]])[0] #if constantly running this function will constantly add to self.mu_hat
 
-            Bx=[]
-            By=[]
-            D = []
-            E = []
-            Ed=[]
-            E_enc1=[] 
+            X=[]
+            X2=[]
 
-            cc=[]
-            '''for i in range(0, len(z_values), sizevec):
-                cc.append(list(z_values[i:sizevec+i]))'''
-            
-            '''sp = data.layout.dim[0].size - self.n*2
-            datalen = sp/(self.n*2)
-            for i in range(0, self.n): #This loop gathers the encrypted data from the subscribed 1-dimensional array and reconstructs it into the desired matrices
-                Bx.append(cc[sp/2+i])#+3*i])
-
-                By.append(cc[(sp/2)+self.n+i])#+3*i])
-
-                D.append(cc[((datalen*self.n+datalen*i)+self.n*2):(datalen*self.n+datalen*(i+1))+self.n*2])
-
-                E.append(cc[datalen*i:datalen*(i+1)])
-
-            E_enc1.append(cc[-2])
-            E_enc1.append(cc[-1])'''
-
-            #D = self.z2
-
-            
-            
-            self.now = np.float64([rospy.get_time()])
-
-
-            
-            self.mu_hat = self.my_op.hom_mul_mat(self.FG_s_enc, [self.mu_hat, self.mu2[0]])[0]
-
-
-
-
-
-            #print("self.mu2: " + str(pymorph.dec_hom(self.p, self.L, self.sk, [self.mu2])))
-
-            #self.mu_hat = cc[data.layout.dim[0].size]
-            #Q = cc[data.layout.dim[0].size+1] #This is the gain constant used when multiplying in the control law 
-
-            #print (float(pymorph.dec_hom(var.p, var.L, self.sk, [self.mu_hat])[0][0])/1000000)
-        
-            #mu_hat_dot = 2*(Ed[0][0] - self.mu_hat) #I need to encrypt the Error in ENC1 form to substract
-
-            
-
-
-            #zeros = []
-
-            #zeros = pymorph.enc_1(var.p, var.L, var.q, var.r, var.N, self.sk, zeros)
-            
-
-
-            '''errr = [int(i*1000) for i in self.e2[0]]
-            
-            if self.o ==2:
-                map_object = map(operator.sub, errr,  self.mu_hat) #map(operator.sub, self.e2[0],  self.mu_hat)
-
-            if self.o ==1:
-                map_object = map(operator.sub, errr,  self.mu2[0]) #map(operator.sub, self.e2[0],  self.mu2[0])
-                self.DT = 10
-                self.o = 2
-
-            
-            de = list(map_object)
-            de = [i*2 for i in de]
-            #de = 2 * (E_enc1[0] - mu_hat)  #previously "mu_hat_dot"
-
-            mu_hat_dot = [int(i*self.DT) for i in de]
-            #self.mu_hat = [int(i*1000) for i in self.mu_hat]
-            
-            #self.mu_hat = map(operator.add, self.mu_hat, mu_hat_dot)'''
-
-            #self.mu_hat = pymorph.hom_mul_mat(var.q, var.N, self.FG_s_enc, [self.mu_hat, mu_hat_dot])[0]
-
-
-
-
-
-
-            #print(pymorph.dec_hom(var.p, var.L, self.sk, [self.mu_hat]))
-
-            
-            #print(pymorph.dec_hom(var.p, var.L, self.sk, [xy_by_mu[0]]))
-            #print(pymorph.dec_hom(var.p, var.L, self.sk, [xy_by_mu[1]]))
-
-            #self.mu_hat = pymorph.hom_mul_mat()
-            
-            #print float(pymorph.dec_hom(var.p, var.L, self.sk, self.mu_hat))/100000000000
-
-            #self.mu_hat = self.mu_hat + mu_hat_dot  #This variable remains in memory and is always encrypted
-
-
-
-
-            #S1bDz = S1bDz.reshape(2, 1)
-
-
-            
-            #print "Bx=", Bx
-            #print "By=", By
-            #print "D=", D
-            #print "E=", E
-            #print "Ed=", Ed
-
-            # Formation shape control
-            #BbDz = [list(a) for a in zip(Bx, By)]
-	    #print "BbDz= ", BbDz
-            #Dzt=np.diag(D)
-            #Dzt=D
-	    #print "Dzt= ", Dzt
-	    #print "c= ", self.c
-            #Ed=np.asarray(Ed)
-            #Ed=E
-	    #print "Ed= ", Ed
-
-            # print "error = ", Ed
-            # print "z_values = ", z_values
-            
-            # Formation motion control
-            #Ab = np.array([[self.mu[0], 0, self.mu[3], 0], \
-                                #[0, self.mu[0], 0, self.mu[3]]])
-            #z = np.array([z_values[7], z_values[8], z_values[1], z_values[2]])
-            # z = [ edge 1 , edge 4]
-            
-            # Control law
-            #U = self.c*BbDz.dot(Dzt).dot(Ed) #+ (Ab.dot(z)).reshape((2, 1))
-
-            #print self.Hom_mul([self.Hom_mul([list(BbDz[0][0])], [list(Dzt.astype(int))])], [list((Ed.astype(int)))])
-
-            #U =  self.Hom_mul([self.Hom_mul([BbDz[0][0]], Dzt[0])], Ed[0])
-            
-
-
-            U=[]
-            U2=[]
-            #Usum =[0]*sizevec
             Y=[]
             Y2=[]
-            #Ysum = [0]*sizevec
 
-            #filler = [0]*len(self.mu_hat)
-            
-            
-            #print("Mu within Controller: "+str(pymorph.dec_hom(self.p, self.L, self.sk, [self.mu_hat])))
 
-            '''if int(sys.argv[1]) == 1:
-                xy_by_mu = pymorph.hom_mul_mat(self.q, self.N, self.xy, [self.mu_hat, filler])
-
-            if int(sys.argv[1]) == 2:
-                xy_by_mu = pymorph.hom_mul_mat(self.q, self.N, self.xy, [self.mu_hat, filler])
-
-            if int(sys.argv[1]) == 3:    
-                xy_by_mu = pymorph.hom_mul_mat(self.q, self.N, self.xy, [filler, self.mu_hat]) #zeros[0], zeros[0]])#self.mu2[0], self.mu2[0]])'''
-
-            #xy_by_mu = pymorph.hom_mul_mat(self.q, self.N, self.xy, [self.mu_hat, filler])
-            #xy_by_mu_x = pymorph.hom_mul_mat(self.q, self.N, [[self.xy[0][0]]], [self.mu_hat])
-            #xy_by_mu_y = pymorph.hom_mul_mat(self.q, self.N, [[self.xy[1][0]]], [self.mu_hat])
+            # [X; Y] x mu_hat
             xy_by_mu_x = self.my_op.hom_multiply([self.mu_hat], [self.xy[0][0]])
             xy_by_mu_y = self.my_op.hom_multiply([self.mu_hat], [self.xy[1][0]])
             xy_by_mu = [xy_by_mu_x[0], xy_by_mu_y[0]]
 
-            #if int(sys.argv[1]) == 3: #used to make the thrid agent also estimate the rogue one instead of the cyclical pattern
-            
-            #    xy_by_mu_x = pymorph.hom_mul(self.q, [self.mu_hat], [self.xy[0][1]])
-            #    xy_by_mu_y = pymorph.hom_mul(self.q, [self.mu_hat], [self.xy[1][1]])
-            #    xy_by_mu = [xy_by_mu_x[0], xy_by_mu_y[0]]
 
-            #print("XY within Controller: "+str(pymorph.dec_hom(self.p, self.L, self.sk, [pymorph.hom_mul_mat(self.q, self.N, self.xy, pymorph.enc_1(self.p, self.L, self.q, self.r, self.N, self.sk, [[1]*len(self.mu_hat), [1]*len(self.mu_hat)] ))))
-
-            #print("XY_BY_MU within Controller: "+str(pymorph.dec_hom(self.p, self.L, self.sk, [xy_by_mu])))
-
+            # [X; Y] x Error
             xy_err = self.my_op.hom_mul_mat(self.xy, self.e2)
 
-            #part1 = []
-            #part2 = []
+            # Calculate final X and Y velocities (For both sections of the controller (U = Controller + Estimator))
+            X = self.my_op.hom_multiply([xy_err[0]] , self.z_rec[0])
+            Y = self.my_op.hom_multiply([xy_err[1]] , self.z_rec[1])
 
-            U2 = (self.my_op.hom_multiply([xy_by_mu[0]] , self.z2[0])) #append the values for mu_hat
-            Y2 = (self.my_op.hom_multiply([xy_by_mu[1]] , self.z2[0])) 
+            X2 = (self.my_op.hom_multiply([xy_by_mu[0]] , self.z_rec[0]))
+            Y2 = (self.my_op.hom_multiply([xy_by_mu[1]] , self.z_rec[0])) 
 
-            #print("Estimator Velocities within Controller: "+str(pymorph.dec_hom(self.p, self.L, self.sk, [U2,Y2])))
+            # Assemble an array with the X and Y velocities 
+            Z = [X,Y]
+            Z2 = [X2,Y2]    
 
-            #if int(sys.argv[1]) == 3:
-            #    U2 = (pymorph.hom_mul(self.q, [xy_by_mu[0]] , self.z2[1])) #append the values for mu_hat
-            #    Y2 = (pymorph.hom_mul(self.q, [xy_by_mu[1]] , self.z2[1]))
-            
-
-            '''if int(sys.argv[1]) == 1:
-                U2 = (pymorph.hom_mul(self.q, [xy_by_mu[0]] , self.z2[0])) #append the values for mu_hat
-                Y2 = (pymorph.hom_mul(self.q, [xy_by_mu[1]] , self.z2[0])) 
-
-            if int(sys.argv[1]) == 2:
-                U2 = (pymorph.hom_mul(self.q, [xy_by_mu[0]] , self.z2[0])) #append the values for mu_hat
-                Y2 = (pymorph.hom_mul(self.q, [xy_by_mu[1]] , self.z2[0])) 
-
-            if int(sys.argv[1]) == 3:
-                U2 = (pymorph.hom_mul(self.q, [xy_by_mu[0]] , self.z2[1])) #append the values for mu_hat
-                Y2 = (pymorph.hom_mul(self.q, [xy_by_mu[1]] , self.z2[1])) '''
-
-            #print(pymorph.dec_hom(var.p, var.L, self.sk, [U2]))
-
-            #for i in range(self.n):
-                
-            U.append(self.my_op.hom_multiply([xy_err[0]] , self.z2[0]))
-            Y.append(self.my_op.hom_multiply([xy_err[1]] , self.z2[1]))
-
-                #U2.append(pymorph.hom_mul(var.q, [xy_by_mu[0]] , self.z2[0][i])) #append the values for mu_hat
-                #Y2.append(pymorph.hom_mul(var.q, [xy_by_mu[1]] , self.z2[0][i]))
-
-                #part2 += pymorph.hom_mul(var.q, xy_by_mu , self.z2[0][i])
-                #U.append(pymorph.hom_mul(var.q, [pymorph.hom_mul(var.q, [BbDz[i][0]], Dzt[i])], Ed[i]))
-                
-                #Y.append(pymorph.hom_mul(var.q, [pymorph.hom_mul(var.q, [BbDz[i][1]], Dzt[i])], Ed[i]))
-                
-                #pymorph.hom_mul(var.q, Q, [pymorph.hom_mul(var.q, S1bDz_x1, self.mu_hat)])
-                #pymorph.hom_mul(var.q, Q, [pymorph.hom_mul(var.q, S1bDz_y1, self.mu_hat)])
-
-                #pymorph.hom_mul(var.q, S1bDz_x1, self.mu_hat) #must turn mu_hat into Enc2
-                #pymorph.hom_mul(var.q, S1bDz_y1, self.mu_hat)
-                #+ 0.011*S1bDz.dot(self.mu_hat) 
-
-                #Usum = map(add, Usum, U[i])
-                #Ysum = map(add, Ysum, Y[i])
-
-            #for i in range(self.n):
-                #U[]from operator import add;map(add, , list2)
-            
-            #for i in range(1, len(U)):
-            #    U[0] = [sum(x) for x in zip(U[0], U[i])]
-            #    Y[0] = [sum(x) for x in zip(Y[0], Y[1])]
-
-            U = U[0]
-            Y = Y[0]
-            
-            '''for i in range(1, len(U2)):
-                U2[0] = [sum(x) for x in zip(U2[0], U2[i])]
-                Y2[0] = [sum(x) for x in zip(Y2[0], Y2[1])]
-            
-            U2 = U2[0]
-            Y2 = Y2[0]'''
-
-            '''if self.n == 3: #These loops add up all the inputs generated by the detected neighboring robots
-                U = [sum(x) for x in zip(U[0], U[1], U[2])]
-                Y = [sum(x) for x in zip(Y[0], Y[1], Y[2])]
-
-            if self.n == 2:
-                U = [sum(x) for x in zip(U[0], U[1])]
-                Y = [sum(x) for x in zip(Y[0], Y[1])]
-
-            if self.n == 1:
-                U = [sum(x) for x in zip(U[0])]
-                Y = [sum(x) for x in zip(Y[0])]'''
-                
-
-
-
-
-            #U =  pymorph.hom_mul(var.q, [pymorph.hom_mul(var.q, [BbDz[0][0]], Dzt[0])], Ed[0])
-
-            #U = self.Hom_mul([BbDz[0][0]], Dzt[0])
-
-            #Y = BbDz[0][0] #self.Hom_mul([self.Hom_mul([BbDz[0][1]], Dzt[0])], Ed[0])  
-
-            
-
-            Z = [[U],[Y]]
-
-            Z2 = [U2,Y2]
-            #print self.Hom_mul([self.Hom_mul([list(BbDz[0][0])], [list(Dzt.astype(int))])], [list((Ed.astype(int)))])
-
-                        
+            # Publish mu_hat 
+            rospy.loginfo("%s + %s", self.my_key.decrypt(self.mu_hat)[0], self.my_key.decrypt(self.mu[0])[0])
             mu_str = pymh2.prep_pub_ros_str(self.mu_hat)
             self.pub_mu.publish(String(mu_str))
 
-            Z_str = pymh2.prep_pub_ros_str(Z) #Publishes the first element of the controller
+            # Publish X and Y Velocities
+            Z_str = pymh2.prep_pub_ros_str(Z) 
             self.pub_controller.publish(String(Z_str))
 
-            Z2_str = pymh2.prep_pub_ros_str(Z2) #Publishes the estimating element of the controller
+            # Publish X and Y Velocities of Estimating part of controller
+            Z2_str = pymh2.prep_pub_ros_str(Z2) 
             self.pub_controller_estimator.publish(String(Z2_str))
 
+            # Update Time variables
             self.now = np.float64([rospy.get_time()])
-            self.time = np.float64([self.now-self.begin])
+            self.time = np.float64([self.now-self.old])
             self.time_log = np.append(self.time_log, self.time)
             self.old = self.now
 
-            #self.mu_hat_log.append(pymorph.dec_hom(self.p, self.L, self.sk, [self.mu_hat])[0][0]) #decrypt mu log to store value for monitoring
-            
-            #self.DT_log.append(self.DT)
-
-            #rospack = rospkg.RosPack()
-            ##PATH = os.path.dirname(os.path.abspath(__file__)) #This gets path from wherever the terminal used to launch the file was
-            #PATH = rospack.get_path('nexhom') #This gets the path from the shown ROS package
-            #FILEPATH = os.path.join(PATH+'/saved_variables', 'Controller_'+self.name+'.csv')
-            #with open(FILEPATH, "w") as output:
-                    
-            #    np.savetxt("mu_hat_log"+self.name+".csv", (np.asarray(self.mu_hat_log)), delimiter=",")
-                        
-            #    self.writer = csv.writer(output, delimiter=',')
-            #    self.writer.writerow(self.mu_hat_log)
-            #    self.writer.writerow(self.DT_log)
-
-
-        else:
-            self.shutdown()
 
 
     def shutdown(self):
@@ -519,6 +252,15 @@ class Controller:
 
         rospy.loginfo('Shutting Down')
         rospy.sleep(1)
+
+    def decrypt_init(self): #This function is here only for debugging purposes
+
+        p_enc = 10**13
+        L_enc = 10**4
+        r_enc = 10**1   # Error Injection
+        N_enc = 5       # Key Length
+
+        self.my_key = pymh2.KEY(p_enc, L_enc, r_enc, N_enc, seed = 20)
 
 
 if __name__ == '__main__':
