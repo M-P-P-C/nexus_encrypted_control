@@ -31,35 +31,35 @@
 <!--https://www.desmos.com/calculator/srwgzppqte-->
 
 <group if="$(eval arg('N')>=1)">
-  <node name="spawn_nexus_1" pkg="gazebo_ros" type="spawn_model" respawn="false" output="screen" args="-urdf -param n_1/robot_description -x -0 -y -0 -Y 0 -model nexus_1"/> 
+  <node name="spawn_nexus_1" pkg="gazebo_ros" type="spawn_model" respawn="false" output="screen" args="-urdf -param /n_1/robot_description -x -0 -y -0 -Y 0 -model nexus_1"/> 
 </group>
 
 <group if="$(eval arg('N')>=2)">
-  <node name="spawn_nexus_2" pkg="gazebo_ros" type="spawn_model" respawn="false" output="screen" args="-urdf -param n_2/robot_description -x 0.7071 -y 0.7281 -Y 0 -model nexus_2"/>  
+  <node name="spawn_nexus_2" pkg="gazebo_ros" type="spawn_model" respawn="false" output="screen" args="-urdf -param /n_2/robot_description -x 0.7071 -y 0.7281 -Y 0 -model nexus_2"/>  
 </group> 
 
 <group if="$(eval arg('N')>=3)">
-  <node name="spawn_nexus_3" pkg="gazebo_ros" type="spawn_model" respawn="false" output="screen" args="-urdf -param n_3/robot_description -x 0.9659 -y -0.2698 -Y 0 -model nexus_3"/> 
+  <node name="spawn_nexus_3" pkg="gazebo_ros" type="spawn_model" respawn="false" output="screen" args="-urdf -param /n_3/robot_description -x 0.9659 -y -0.2698 -Y 0 -model nexus_3"/> 
 </group>
 
 <group if="$(eval arg('N')>=4)">
-  <node name="spawn_nexus_4" pkg="gazebo_ros" type="spawn_model" respawn="false" output="screen" args="-urdf -param n_4/robot_description -x 0 -y -1 -Y 0 -model nexus_4" /> 
+  <node name="spawn_nexus_4" pkg="gazebo_ros" type="spawn_model" respawn="false" output="screen" args="-urdf -param /n_4/robot_description -x 0 -y -1 -Y 0 -model nexus_4" /> 
 </group>
 
 <group if="$(eval arg('N')>=5)">
-  <node name="spawn_nexus_5" pkg="gazebo_ros" type="spawn_model" respawn="false" output="screen" args="-urdf -param n_5/robot_description -x -1 -y -0.5 -Y 0 -model nexus_5" /> 
+  <node name="spawn_nexus_5" pkg="gazebo_ros" type="spawn_model" respawn="false" output="screen" args="-urdf -param /n_5/robot_description -x -1 -y -0.5 -Y 0 -model nexus_5" /> 
 </group>
 
 <group if="$(eval arg('N')>=6)">
-  <node  name="spawn_nexus_6" pkg="gazebo_ros" type="spawn_model" respawn="false" output="screen" args="-urdf -param n_6/robot_description -x -1 -y 0.5 -Y 0 -model nexus_6"/> 
+  <node  name="spawn_nexus_6" pkg="gazebo_ros" type="spawn_model" respawn="false" output="screen" args="-urdf -param /n_6/robot_description -x -1 -y 0.5 -Y 0 -model nexus_6"/> 
 </group>
 
 <group if="$(eval arg('N')>=7)">
-  <node name="spawn_nexus_7" pkg="gazebo_ros" type="spawn_model" respawn="false" output="screen" args="-urdf -param n_7/robot_description -x 0 -y 1 -Y 0 -model nexus_7"/> 
+  <node name="spawn_nexus_7" pkg="gazebo_ros" type="spawn_model" respawn="false" output="screen" args="-urdf -param /n_7/robot_description -x 0 -y 1 -Y 0 -model nexus_7"/> 
 </group>
 
 <group if="$(eval arg('N')>=8)">
-  <node name="spawn_nexus_8" pkg="gazebo_ros" type="spawn_model" respawn="false" output="screen" args="-urdf -param n_8/robot_description -x 1 -y 1 -Y 0 -model nexus_8"/> 
+  <node name="spawn_nexus_8" pkg="gazebo_ros" type="spawn_model" respawn="false" output="screen" args="-urdf -param /n_8/robot_description -x 1 -y 1 -Y 0 -model nexus_8"/> 
 </group>
 
 

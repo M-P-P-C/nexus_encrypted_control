@@ -10,6 +10,10 @@ echo NOW EXECUTING SCRIPTS FROM THE PACKAGE: $PACKAGEuser
 
 echo
 
+roslaunch gazebo_ros
+
+sleep 2
+
 roslaunch $PACKAGEuser N_nexus.launch N:=3 &
 
 
@@ -38,7 +42,7 @@ for i in 1 2 3   #add new values here depending on N amount of robots
 
  do 
 
-  xterm -e rosrun $PACKAGEuser hom_enc2_est_v3.py "$i" &
+  gnome-terminal -- bash -c "rosrun $PACKAGEuser hom_enc2_est_v3.py "$i"; exec bash" &
 
  done
 
@@ -52,7 +56,7 @@ for i in 1 2 3   #add new values here depending on N amount of robots
 
  do 
 
-  xterm -e rosrun $PACKAGEuser controller_N_encr_formation_est_v3.py "$i" &
+  gnome-terminal -- bash -c "rosrun $PACKAGEuser controller_N_hom_encr_formation_est_v3.py "$i"; exec bash" &
 
  done
 
@@ -66,7 +70,7 @@ for i in 1 2 3   #add new values here depending on N amount of robots
 
  do 
 
-  xterm -e rosrun $PACKAGEuser hom_dec2_est_v3.py "$i" &
+  gnome-terminal -- bash -c "rosrun $PACKAGEuser hom_dec2_est_v3.py "$i"; exec bash" &
 
  done
 
