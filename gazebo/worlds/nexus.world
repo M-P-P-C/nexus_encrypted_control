@@ -116,10 +116,10 @@
       <pose frame=''>1 0 0.5 0 -0 0</pose>
     </model> -->
 
-    <!-- Focus camera on tall pendulum -->
+    <!-- Set Camera on Top of Formation -->
     <gui fullscreen='0'>
       <camera name='user_camera'>
-        <pose>5.34826 -5.43424 2.12132 0 0.275643 2.35619</pose>
+        <pose>0.25000 0.00000 4.50000 0.00000 1.60000 3.15000</pose>
         <view_controller>orbit</view_controller>
       </camera>
     </gui>
