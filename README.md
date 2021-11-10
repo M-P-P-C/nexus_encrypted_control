@@ -18,3 +18,7 @@ This package contains multiple launch files:
 - sim_spawn_and_control_encrypted_one_robot_FILTER: Launch the formation with encryption, using the research done by Suzanne on rlms adaptive filter
 
 - sim_spawn_and_control_est: Launch the formation without encryption, with estimation
+
+#Dataflow
+
+![alt text](CDC_dataflow_v2_Fixed.drawio.png)
