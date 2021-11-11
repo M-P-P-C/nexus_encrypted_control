@@ -21,4 +21,4 @@ This package contains multiple launch files:
 
 #Dataflow
 
-![alt text](CDC_dataflow_v2_Fixed.drawio.png)
+![alt text](Encryption_Dataflow.svg)
