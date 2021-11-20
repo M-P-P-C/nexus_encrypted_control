@@ -15,7 +15,9 @@ This package contains multiple launch files:
 
 - sim_spawn_and_control_encrypted_formation_with_estimator_gnome: Launch the encrypted formation with estimator using "gnome" terminals
 
-- sim_spawn_and_control_encrypted_one_robot_FILTER: Launch the formation with encryption, using the research done by Suzan on rlms adaptive filter
+- sim_spawn_and_control_encrypted_one_robot_filter: Launch the formation with encryption, using the research done by Suzan on rlms adaptive filter
+
+- sim_spawn_and_control_encrypted_one_robot_filter_alt: Launch the formation with encryption, using the research done by Suzan on rlms adaptive filter. Using the same type of controller used in her thesis. (This one works better than the other)
 
 - sim_spawn_and_control_est: Launch the formation without encryption, with estimation
 
