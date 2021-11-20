@@ -1,26 +1,29 @@
 #!/usr/bin/env python
+
 import sys #This import is used to allow for inputs into the function (hence the use of "sys.argv[]") 
 import rospy
-import matplotlib.pyplot as pl
-import numpy as np
+
 from rospy_tutorials.msg import Floats
 from std_msgs.msg import Int32
 from rospy.numpy_msg import numpy_msg
 from geometry_msgs.msg import Twist
+
+import matplotlib.pyplot as pl
+import numpy as np
 
 class controller:
     ''' The controller uses the interagent distances to determine the desired velocity of the Nexus '''
     
     def __init__(self):
         ''' Initiate self and subscribe to /z_values topic '''
-        print "hello"
+
         self.name='n_'+str(int(sys.argv[1]))
 
         # controller variables
         self.running = np.float32(1)
         self.d = np.float32(0.8)        
-       # if int(sys.argv[1])==1 :
-       #     self.d = np.float32(0.8) #To check if estimator works when one robot has a distance mismatch assigns a reading error to robot 3
+        # if int(sys.argv[1])==1 :
+        #     self.d = np.float32(0.8) #To check if estimator works when one robot has a distance mismatch assigns a reading error to robot 3
         if int(sys.argv[1])==4 :
             self.d = np.float32(0.9) 
 
@@ -162,7 +165,7 @@ class controller:
 
             if int(sys.argv[1]) == 1:
                 #self.mu_hat = np.array([[0], [0]])
-                print self.mu_hat
+                print(self.mu_hat)
                 mu_hat_dot = [[0, 0]]
                 S1bDz = np.array([[0,0], [0,0]], dtype = np.float)
                 tt=0
@@ -204,9 +207,9 @@ class controller:
                 mu_hat_dot = [[0, 0]]
                 S1bDz = np.array([[0,0], [0,0]], dtype = np.float)
                 tt=0
-                print self.n
+                print(self.n)
                 for i in [0, 2]:
-                    print Ed[i]
+                    print(Ed[i])
                     mu_hat_dot[0][tt] = 2*(Ed[i] - self.mu_hat[tt])
                     tt = tt+1
 
@@ -295,8 +298,8 @@ class controller:
                 
             print "U = ", U '''
 
-            print '-----------------'
-            print 'Nexus ' + str(int(sys.argv[1]))
+            print('-----------------')
+            print('Nexus ' + str(int(sys.argv[1])))
 
             #print "Detected Robots: ", self.n
 
@@ -307,13 +310,13 @@ class controller:
             #for distance of 0.8 vs 1: -0.6172
             #I think this gain should be equal to self.DT maybe
 
-            print "Estimator: ", S1bDz.dot(self.mu_hat)
+            print("Estimator: ", S1bDz.dot(self.mu_hat))
 
-            print "Control: ", self.c*BbDz.dot(Dzt).dot(Ed)
+            print("Control: ", self.c*BbDz.dot(Dzt).dot(Ed))
 
-            print "E ", Ed
+            print("E ", Ed)
 
-            print "mu ", self.mu_hat
+            print("mu ", self.mu_hat)
 
             #print "U = ", U
                 
@@ -390,8 +393,8 @@ class controller:
         self.velocity = Twist()
         self.pub.publish(self.velocity)
 
-	print len(self.time_log)
-	print len(self.E1_log)
+        print(len(self.time_log))
+        print(len(self.E1_log))
 
         rospy.sleep(1)
         pl.close("all")       
@@ -399,14 +402,14 @@ class controller:
         pl.title("Inter-agent distance error measured by Nexus "+str(int(sys.argv[1])))
         pl.plot(self.time_log, self.E1_log, label="e1_nx"+str(int(sys.argv[1])), color='b')
         pl.plot(self.time_log, self.E2_log, label="e2_nx"+str(int(sys.argv[1])), color='y')
-	if self.n > 2:
-	    pl.plot(self.time_log, self.E3_log, label="e3_nx"+str(int(sys.argv[1])), color='g')
-	if self.n > 3:
-	    pl.plot(self.time_log, self.E4_log, label="e4_nx"+str(int(sys.argv[1])), color='r')
-	if self.n > 4:
-	    pl.plot(self.time_log, self.E5_log, label="e5_nx"+str(int(sys.argv[1])), color='c')
-	if self.n > 5:
-	    pl.plot(self.time_log, self.E6_log, label="e6_nx"+str(int(sys.argv[1])), color='m')
+        if self.n > 2:
+            pl.plot(self.time_log, self.E3_log, label="e3_nx"+str(int(sys.argv[1])), color='g')
+        if self.n > 3:
+            pl.plot(self.time_log, self.E4_log, label="e4_nx"+str(int(sys.argv[1])), color='r')
+        if self.n > 4:
+            pl.plot(self.time_log, self.E5_log, label="e5_nx"+str(int(sys.argv[1])), color='c')
+        if self.n > 5:
+            pl.plot(self.time_log, self.E6_log, label="e6_nx"+str(int(sys.argv[1])), color='m')
         pl.xlabel("Time [s]")
         pl.ylabel("Error [m]")
         pl.grid()

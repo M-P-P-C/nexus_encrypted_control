@@ -1,12 +1,15 @@
-#!/usr/bin/env python  
+#!/usr/bin/env python 
+ 
 import sys 
 import rospy
-import matplotlib.pyplot as pl
-import numpy as np
+
 from rospy_tutorials.msg import Floats
 from std_msgs.msg import Int32
 from rospy.numpy_msg import numpy_msg
 from geometry_msgs.msg import Twist
+
+import numpy as np
+import matplotlib.pyplot as pl
 
 class controller:
     ''' The controller uses the interagent distances to determine the desired velocity of the Nexus '''
@@ -125,20 +128,20 @@ class controller:
                 E=np.append(E,z_values[3*i]-self.d)
                 Ed.append([E[i]])
 	    
-	    print "Bx=", Bx
-	    print "By=", By
-	    print "D=", D
-	    print "E=", E
-	    print "Ed=", Ed
+            print("Bx=", Bx)
+            print("By=", By)
+            print("D=", D)
+            print("E=", E)
+            print("Ed=", Ed)
 
             # Formation shape control
             BbDz=np.append([Bx],[By], axis=0)
-	    print "BbDz= ", BbDz
+            print("BbDz= ", BbDz)
             Dzt=np.diag(D)
-	    print "Dzt= ", Dzt
-	    print "c= ", self.c
+            print("Dzt= ", Dzt)
+            print("c= ", self.c)
             Ed=np.asarray(Ed)
-	    print "Ed= ", Ed
+            print("Ed= ", Ed)
 
             # print "error = ", Ed
             # print "z_values = ", z_values
@@ -151,7 +154,7 @@ class controller:
             
             # Control law
             U = self.c*BbDz.dot(Dzt).dot(Ed) #+ (Ab.dot(z)).reshape((2, 1))
-            print "U = ", -U
+            print("U = ", -U)
         
             # Saturation
             v_max = 0.2
@@ -167,7 +170,7 @@ class controller:
             # Set old U values in order to prevent shaking
             self.U_oldd = self.U_old
             self.U_old = U
-            print "Number of Robots Detected: ", self.n
+            print("Number of Robots Detected: ", self.n)
                 
             '''# Append 0 to error if no robot is detected to be able to plot later 
             if self.n > 3:
@@ -227,16 +230,16 @@ class controller:
         # print 'cmd_vel NEXUS 1 (x,y)', self.velocity.linear.x, self.velocity.linear.y
         #        rospy.loginfo(self.velocity)
         self.pub.publish(self.velocity)
-	print("Message Published by Controller: ")
-	print(self.velocity)
-	print("End of Message")
-	#if self.n<3:
-	#np.save('/home/mariano/Documents/Data/E1_log_nx'+str(int(sys.argv[1])), self.E1_log)
-	#np.save('/home/mariano/Documents/Data/E2_log_nx'+str(int(sys.argv[1])), self.E2_log)
-	#if self.n<4:
-	#np.save('/home/mariano/Documents/Data/E3_log_nx'+str(int(sys.argv[1])), self.E3_log)
-	#if self.n<5:
-	#np.save('/home/mariano/Documents/Data/E4_log_nx'+str(int(sys.argv[1])), self.E4_log)
+        print("Message Published by Controller: ")
+        print(self.velocity)
+        print("End of Message")
+        #if self.n<3:
+        #np.save('/home/mariano/Documents/Data/E1_log_nx'+str(int(sys.argv[1])), self.E1_log)
+        #np.save('/home/mariano/Documents/Data/E2_log_nx'+str(int(sys.argv[1])), self.E2_log)
+        #if self.n<4:
+        #np.save('/home/mariano/Documents/Data/E3_log_nx'+str(int(sys.argv[1])), self.E3_log)
+        #if self.n<5:
+        #np.save('/home/mariano/Documents/Data/E4_log_nx'+str(int(sys.argv[1])), self.E4_log)
         #np.save('/home/mariano/Documents/Data/U_log_nx1', self.U_log)
         #np.save('/home/mariano/Documents/Data/time_log_nx1', self.time_log)
     def shutdown(self):
@@ -254,20 +257,20 @@ class controller:
         pl.title("Inter-agent distance error measured by Nexus "+str(int(sys.argv[1])))
         pl.plot(self.time_log, self.E1_log, label="e1_nx"+str(int(sys.argv[1])), color='b')
         pl.plot(self.time_log, self.E2_log, label="e2_nx"+str(int(sys.argv[1])), color='y')
-	if self.n > 2:
-	    pl.plot(self.time_log, self.E3_log, label="e3_nx"+str(int(sys.argv[1])), color='g')
-	if self.n > 3:
-	    pl.plot(self.time_log, self.E4_log, label="e4_nx"+str(int(sys.argv[1])), color='r')
-	if self.n > 4:
-	    pl.plot(self.time_log, self.E5_log, label="e5_nx"+str(int(sys.argv[1])), color='c')
-	if self.n > 5:
-	    pl.plot(self.time_log, self.E6_log, label="e6_nx"+str(int(sys.argv[1])), color='m')
+        if self.n > 2:
+            pl.plot(self.time_log, self.E3_log, label="e3_nx"+str(int(sys.argv[1])), color='g')
+        if self.n > 3:
+            pl.plot(self.time_log, self.E4_log, label="e4_nx"+str(int(sys.argv[1])), color='r')
+        if self.n > 4:
+            pl.plot(self.time_log, self.E5_log, label="e5_nx"+str(int(sys.argv[1])), color='c')
+        if self.n > 5:
+            pl.plot(self.time_log, self.E6_log, label="e6_nx"+str(int(sys.argv[1])), color='m')
         pl.xlabel("Time [s]")
         pl.ylabel("Error [m]")
         pl.grid()
 
         pl.legend()
-	#A="/home/mariano/Desktop/Plots/Nexus_Distance_"+str(int(sys.argv[1]))+".png"
+        #A="/home/mariano/Desktop/Plots/Nexus_Distance_"+str(int(sys.argv[1]))+".png"
         pl.savefig("/home/mariano/Desktop/Plots/Nexus_Distance_"+str(int(sys.argv[1]))+".png")
         
         pl.figure(1)
@@ -277,7 +280,7 @@ class controller:
         pl.ylabel("Velocity [m/s]")
         pl.grid()
         pl.savefig("/home/mariano/Desktop/Plots/Nexus_Velocity_"+str(int(sys.argv[1]))+".png")
-#        pl.legend()
+        #pl.legend()
         
         pl.pause(0)
 

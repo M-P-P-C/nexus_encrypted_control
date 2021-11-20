@@ -257,7 +257,7 @@ class Determine_z_values:
 if __name__ == '__main__':
 
     try:
-        rospy.init_node('dataprocessingnode_'+str(int(sys.argv[1])), anonymous=False)
+        rospy.init_node('Dataprocessingnode_'+str(int(sys.argv[1])), anonymous=False)
         r = rospy.Rate(10)
         Determine_z_values()
         rospy.spin() 
