@@ -1,0 +1,76 @@
+#!/bin/sh
+
+#REMEMBER to set the proper amount of N within N_nexus.launch and add the new spawn robots in N_world.launch
+
+PACKAGEuser="nexus_encrypted_control"       #CHANGE THIS VARIABLE TO NAME OF PACKAGE
+
+echo
+
+echo NOW EXECUTING SCRIPTS FROM THE PACKAGE: $PACKAGEuser
+
+echo
+
+roslaunch $PACKAGEuser N_nexus.launch N:=2 &
+
+
+sleep 10
+
+echo
+echo "Launching Data Processing Node"
+echo
+
+for i in 1   #add new values here depending on N amount of robots
+
+ do 
+
+  xterm -e rosrun $PACKAGEuser dataprocessingnode_N_v3.py "$i" &
+
+ done
+
+sleep 2
+
+echo
+echo "Launching Encryption Node"
+echo
+
+for i in 1   #add new values here depending on N amount of robots
+
+ do 
+
+  xterm -e rosrun $PACKAGEuser hom_enc2_filter_new.py "$i" &
+
+ done
+
+sleep 2
+
+echo
+echo "Launching Encrypted Controller Node"
+echo
+
+for i in 1   #add new values here depending on N amount of robots
+
+ do 
+
+  xterm -e rosrun $PACKAGEuser controller_N_hom_encr_formation_filter.py "$i" &
+
+ done
+
+sleep 2
+
+echo
+echo "Launching decryption Node"
+echo
+
+for i in 1   #add new values here depending on N amount of robots
+
+ do 
+
+  xterm -e rosrun $PACKAGEuser hom_dec2_filter_new.py "$i" &
+
+ done
+
+echo
+echo "Press Ctrl-C to terminate"
+echo
+
+wait
