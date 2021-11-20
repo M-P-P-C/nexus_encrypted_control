@@ -225,7 +225,7 @@ class Determine_z_values:
             self.time = np.float64([self.now-self.begin])
             self.time_log = np.append(self.time_log, self.time)
             self.E1_log.append(self.z_values[0]-0.8)
-            self.E2_log.append(self.z_values[3]-0.8)
+            #self.E2_log.append(self.z_values[3]-0.8)
             rospy.loginfo("Time between runs: " + str(self.now-self.old) + "\n")
             self.old = self.now
 

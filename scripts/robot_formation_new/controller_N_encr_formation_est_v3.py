@@ -12,7 +12,7 @@ import numpy as np
 import csv
 
 
-from pymomorphic3 import pymomorphic_py2 as pymh2 #Change to pymomorphic_py3 to use with python3
+from pymomorphic3 import pymomorphic_py2 as pymh #Change to pymomorphic_py3 to use with python3
 
 
 
@@ -94,7 +94,7 @@ class Controller:
         rospy.Subscriber(self.name+'/enc_x_and_y', String, callback = self.controller)
 
         # Initialize Decryption for debugging
-        #'''
+        '''
         self.decrypt_init()
         #'''
 
@@ -110,14 +110,14 @@ class Controller:
     def recover_encryption_vars(self, data):
 
         if not rospy.is_shutdown():
-            enc_vars = pymh2.recvr_pub_ros_str(data.data)
+            enc_vars = pymh.recvr_pub_ros_str(data.data)
             
             p_enc = enc_vars[0]
             L_enc = enc_vars[1]
             r_enc = enc_vars[2]
             N_enc = enc_vars[3]
 
-            self.my_op = pymh2.HOM_OP(p_enc, L_enc, r_enc, N_enc)
+            self.my_op = pymh.HOM_OP(p_enc, L_enc, r_enc, N_enc)
 
             self.mu_hat = [0]*(N_enc+1) #initialize mu_hat with N+1 size
 
@@ -127,21 +127,21 @@ class Controller:
         
         if not rospy.is_shutdown():
             e = data.data
-            self.e2 = pymh2.recvr_pub_ros_str(e)
+            self.e2 = pymh.recvr_pub_ros_str(e)
 
         
     def recover_z(self, data): 
 
         if not rospy.is_shutdown():
             z = data.data
-            self.z_rec = pymh2.recvr_pub_ros_str(z)
+            self.z_rec = pymh.recvr_pub_ros_str(z)
 
 
     def recover_mu(self, data): 
 
         if not rospy.is_shutdown():
             mu = data.data
-            self.mu = pymh2.recvr_pub_ros_str(mu)
+            self.mu = pymh.recvr_pub_ros_str(mu)
 
 
         #print "PRINTING MULTIPILICATION CONTROLLER: " + str([self.mu_hat, self.mu2[0]])
@@ -150,7 +150,7 @@ class Controller:
 
         if not rospy.is_shutdown():
             DT_arr = data.data
-            self.FG_s_enc = pymh2.recvr_pub_ros_str(DT_arr)
+            self.FG_s_enc = pymh.recvr_pub_ros_str(DT_arr)
 
 
 
@@ -193,7 +193,7 @@ class Controller:
 
             xy=data.data
             
-            self.xy = pymh2.recvr_pub_ros_str(xy)
+            self.xy = pymh.recvr_pub_ros_str(xy)
 
             # Calculate new mu_hat
             self.mu_hat = self.my_op.hom_mul_mat(self.FG_s_enc, [self.mu_hat, self.mu[0]])[0] #if constantly running this function will constantly add to self.mu_hat
@@ -215,6 +215,8 @@ class Controller:
             xy_err = self.my_op.hom_mul_mat(self.xy, self.e2)
 
             # Calculate final X and Y velocities (For both sections of the controller (U = Controller + Estimator))
+
+            # [Xe; Ye] x D_z_tilde
             X = self.my_op.hom_multiply([xy_err[0]] , self.z_rec[0])
             Y = self.my_op.hom_multiply([xy_err[1]] , self.z_rec[1])
 
@@ -227,15 +229,15 @@ class Controller:
 
             # Publish mu_hat 
             rospy.loginfo("%s + %s", self.my_key.decrypt(self.mu_hat)[0], self.my_key.decrypt(self.mu[0])[0])
-            mu_str = pymh2.prep_pub_ros_str(self.mu_hat)
+            mu_str = pymh.prep_pub_ros_str(self.mu_hat)
             self.pub_mu.publish(String(mu_str))
 
             # Publish X and Y Velocities
-            Z_str = pymh2.prep_pub_ros_str(Z) 
+            Z_str = pymh.prep_pub_ros_str(Z) 
             self.pub_controller.publish(String(Z_str))
 
             # Publish X and Y Velocities of Estimating part of controller
-            Z2_str = pymh2.prep_pub_ros_str(Z2) 
+            Z2_str = pymh.prep_pub_ros_str(Z2) 
             self.pub_controller_estimator.publish(String(Z2_str))
 
             # Update Time variables
@@ -260,7 +262,7 @@ class Controller:
         r_enc = 10**1   # Error Injection
         N_enc = 5       # Key Length
 
-        self.my_key = pymh2.KEY(p_enc, L_enc, r_enc, N_enc, seed = 20)
+        self.my_key = pymh.KEY(p_enc, L_enc, r_enc, N_enc, seed = 20)
 
 
 if __name__ == '__main__':

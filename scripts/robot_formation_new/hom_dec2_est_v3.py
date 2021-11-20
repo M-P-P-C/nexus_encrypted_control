@@ -11,7 +11,7 @@ from geometry_msgs.msg import Twist
 import csv
 import numpy as np
 
-from pymomorphic3 import pymomorphic_py2 as pymh2 #Change to pymomorphic_py3 to use with python3
+from pymomorphic3 import pymomorphic_py2 as pymh #Change to pymomorphic_py3 to use with python3
 
 
 class Hom_decrypt:
@@ -54,7 +54,7 @@ class Hom_decrypt:
     def scaling(self, data):
 
         scal = data.data
-        self.scaling_list = pymh2.recvr_pub_ros_str(scal)
+        self.scaling_list = pymh.recvr_pub_ros_str(scal)
     
     def scalDT_rec(self, data):
 
@@ -64,21 +64,21 @@ class Hom_decrypt:
 
         if not rospy.is_shutdown():
             
-            self.secret_key = np.array(pymh2.recvr_pub_ros_str(data.data), dtype = object)
+            self.secret_key = np.array(pymh.recvr_pub_ros_str(data.data), dtype = object)
             
             #self.secret_key_subscriber.unregister() #Once the data has been obtained the subscriber is stopped
 
     def recover_encryption_vars(self, data):
 
         if not rospy.is_shutdown():
-            enc_vars = pymh2.recvr_pub_ros_str(data.data)
+            enc_vars = pymh.recvr_pub_ros_str(data.data)
             
             p_enc = enc_vars[0]
             L_enc = enc_vars[1]
             r_enc = enc_vars[2]
             N_enc = enc_vars[3]
 
-            self.my_key = pymh2.KEY(p_enc, L_enc, r_enc, N_enc, secret_key_set = self.secret_key)
+            self.my_key = pymh.KEY(p_enc, L_enc, r_enc, N_enc, secret_key_set = self.secret_key)
 
             self.enc_vars_subscriber.unregister() #Once the data has been obtained the subscriber is stopped
 
@@ -90,7 +90,7 @@ class Hom_decrypt:
 
             mu = data.data
 
-            self.mu = pymh2.recvr_pub_ros_str(mu)
+            self.mu = pymh.recvr_pub_ros_str(mu)
 
 
     def mu_rec_tot(self,data):
@@ -99,7 +99,7 @@ class Hom_decrypt:
 
             xy_mu = data.data
 
-            self.xy_mu = pymh2.recvr_pub_ros_str(xy_mu)
+            self.xy_mu = pymh.recvr_pub_ros_str(xy_mu)
 
 
 
@@ -112,7 +112,7 @@ class Hom_decrypt:
 
             encr = data.data
 
-            encrypted_data = pymh2.recvr_pub_ros_str(encr)           
+            encrypted_data = pymh.recvr_pub_ros_str(encr)           
 
             # Prepare the scaling values [scaling_error, scaling_x, scaling_z_reciprocal, scaling_DT, scaling_(err-mu)]
             S = self.scaling_list[0]*self.scaling_list[1]*self.scaling_list[2]
@@ -155,7 +155,7 @@ class Hom_decrypt:
             rospy.loginfo("\n")
 
             v_max = 0.04
-            v_min = 0.0001
+            v_min = 0.001
             for i in range(len(decr)):          
                 if final_velocity[i] > v_max:
                     final_velocity[i] = v_max
@@ -201,9 +201,9 @@ class Hom_decrypt:
         self.velocity = Twist()
         self.pub.publish(self.velocity) #set velocity to 0 to avoid drift
 
-        rospack = rospkg.RosPack()
-        PATH = rospack.get_path('nexhom') #This gets the path from the shown ROS package
-        FILEPATH = os.path.join(PATH+'/saved_variables', 'Decryption_'+self.name+'.csv')
+        #rospack = rospkg.RosPack()
+        #PATH = rospack.get_path('nexus_encrypted_control') #This gets the path from the shown ROS package
+        #FILEPATH = os.path.join(PATH+'/saved_variables', 'Decryption_'+self.name+'.csv')
 
         rospy.loginfo("\n")
 

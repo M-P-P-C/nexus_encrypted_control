@@ -13,12 +13,8 @@ import csv #to read private key from csv file
 import copy
 import random
 
-from pymomorphic3 import pymomorphic_py2 as pymh2 #Change to pymomorphic_py3 to use with python3
+from pymomorphic3 import pymomorphic_py2 as pymh #Change to pymomorphic_py3 to use with python3
 
-
-#CHECK A ROBOT INDIVIDUALLY FOR ERRORS IN CALCULATIONS DUE TO LOST MEMORY USING PYMOMORPHIC
-
-#REDUCE USE OF LONG?
 
 class Hom_encrypt:
     '''This encrypts the data recieved and outputs the homomorphically encrypted data in form of a matrix'''
@@ -39,12 +35,11 @@ class Hom_encrypt:
         self.r_enc = 10**1   # Error Injection
         self.N_enc = 5       # Key Length
 
-        self.my_key = pymh2.KEY(self.p_enc, self.L_enc, self.r_enc, self.N_enc, seed = 20)
+        self.my_key = pymh.KEY(self.p_enc, self.L_enc, self.r_enc, self.N_enc, seed = 20)
 
         self.mu_dec = 0 # initialize mu that will be received from decryption node
 
         # Initialize some variables
-        self.mu_dec = 0
         self.time_log = np.array([])
         self.now = np.float64([rospy.get_time()])
         self.old = np.float64([rospy.get_time()])
@@ -59,7 +54,7 @@ class Hom_encrypt:
         self.scal_DT = 100
         self.FG_s = [[1, int(self.DT*self.scal_DT)]] 
         self.FG_s_enc =  self.my_key.enc_2_mat(self.FG_s) 
-        self.FG_s_enc_str = pymh2.prep_pub_ros_str(self.FG_s_enc)
+        self.FG_s_enc_str = pymh.prep_pub_ros_str(self.FG_s_enc)
 
         # Prepare shutdown
         rospy.on_shutdown(self.shutdown)
@@ -97,11 +92,11 @@ class Hom_encrypt:
             rospy.loginfo("Encryption of Nexus: %s", int(sys.argv[1]))
 
             # Publish encryption variables
-            encryption_vars_topub = pymh2.prep_pub_ros_str([self.p_enc, self.L_enc, self.r_enc, self.N_enc])
+            encryption_vars_topub = pymh.prep_pub_ros_str([self.p_enc, self.L_enc, self.r_enc, self.N_enc])
             self.pub_encryption_variables.publish(encryption_vars_topub)
 
             # Publish secret_key for decryption
-            secret_key_topub = pymh2.prep_pub_ros_str(self.my_key.secret_key.tolist())
+            secret_key_topub = pymh.prep_pub_ros_str(self.my_key.secret_key.tolist())
             self.pub_secret_key.publish(secret_key_topub)
 
             
@@ -151,7 +146,7 @@ class Hom_encrypt:
             
             mu_ciph = self.my_key.encrypt([int(mu)])
 
-            mu_topub = pymh2.prep_pub_ros_str(mu_ciph.tolist())
+            mu_topub = pymh.prep_pub_ros_str(mu_ciph.tolist())
             self.pub_mu.publish(String(mu_topub))
 
 
@@ -188,7 +183,7 @@ class Hom_encrypt:
             rospy.loginfo("z_values after scaling:\n %s", z_values)
             rospy.loginfo("Total Scaling: %i", scaling)
             
-            scaling_values = pymh2.prep_pub_ros_str([scal1, scal2, scal4, self.scal_DT, scaling_mu])
+            scaling_values = pymh.prep_pub_ros_str([scal1, scal2, scal4, self.scal_DT, scaling_mu])
 
             self.pub_scal.publish(scaling_values)
             self.pub_scalDT.publish(self.scal_DT)
@@ -205,7 +200,7 @@ class Hom_encrypt:
 
                 err_ciph.append(ciphertext[0])
 
-            error_topub = pymh2.prep_pub_ros_str(np.array(err_ciph).tolist()) #Pymomorphic must be updated to output only lists
+            error_topub = pymh.prep_pub_ros_str(np.array(err_ciph).tolist()) #Pymomorphic must be updated to output only lists
 
             self.pub_e.publish(String(error_topub))
 
@@ -219,7 +214,7 @@ class Hom_encrypt:
 
                 zr_ciph[i] = self.my_key.encrypt2(m) 
                 
-            rec_z_topub = pymh2.prep_pub_ros_str(zr_ciph)
+            rec_z_topub = pymh.prep_pub_ros_str(zr_ciph)
 
             self.pub_z.publish(String(rec_z_topub))
             
@@ -230,7 +225,7 @@ class Hom_encrypt:
 
             x_y_enc = self.my_key.enc_2_mat(x_y)
 
-            x_y_enc_topub = pymh2.prep_pub_ros_str(x_y_enc)
+            x_y_enc_topub = pymh.prep_pub_ros_str(x_y_enc)
             
             self.pub_xy.publish(String(x_y_enc_topub))
             
