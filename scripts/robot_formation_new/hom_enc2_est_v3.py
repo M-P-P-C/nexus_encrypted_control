@@ -146,7 +146,7 @@ class Hom_encrypt:
             
             mu_ciph = self.my_key.encrypt([int(mu)])
 
-            mu_topub = pymh.prep_pub_ros_str(mu_ciph.tolist())
+            mu_topub = pymh.prep_pub_ros_str(mu_ciph)
             self.pub_mu.publish(String(mu_topub))
 
 
@@ -200,7 +200,7 @@ class Hom_encrypt:
 
                 err_ciph.append(ciphertext[0])
 
-            error_topub = pymh.prep_pub_ros_str(np.array(err_ciph).tolist()) #Pymomorphic must be updated to output only lists
+            error_topub = pymh.prep_pub_ros_str(err_ciph) #Pymomorphic must be updated to output only lists
 
             self.pub_e.publish(String(error_topub))
 
