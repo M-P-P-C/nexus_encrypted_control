@@ -1,10 +1,23 @@
 # Nexus Encrypted Control
 nexus_encrypted_control is a ROS package that uses homomorphic encryption in the control a formation of robots for the DTPA lab at the University of Groningen.
 
+## Table of contents
+<!--ts-->
+  * [Background](#background)
+  * [Installing](#installing)
+  * [Launch Scripts](#launch_scripts)
+  * [Dataflow](#dataflow)
+  * [Formation Performance](#formation_performance)
+  * [RLMS Filter Performance](#rlms_filter_performance)
+  * [References](#references)
+<!--te-->
+
 # Background
 You can find the original thesis [here](https://fse.studenttheses.ub.rug.nl/21680/), or the resulting conference paper [here](https://arxiv.org/abs/2104.07684#).
 
 For more information on the homomorphic encryption see the work by Junsoo Kim in [[1]](#1)
+
+This package also includes scripts to make use of the rlms filter work by Suzan Reesink [here](https://fse.studenttheses.ub.rug.nl/20984/) 
 
 # Installing
 
@@ -26,9 +39,13 @@ This package contains multiple launch files:
 
 - sim_spawn_and_control_est: Launch the formation without encryption, with estimation
 
-#Dataflow
+# Dataflow
 
 ![alt text](Encryption_Dataflow.svg)
+
+# Formation Performance
+
+# RLMS Filter Performance
 
 # References
 
