@@ -65,7 +65,7 @@ for i in 1   #add new values here depending on N amount of robots
 
  do 
 
-  xterm -e rosrun $PACKAGEuser hom_dec2_filter_new.py "$i" &
+  xterm -e rosrun $PACKAGEuser hom_dec2_filter.py "$i" &
 
  done
 
