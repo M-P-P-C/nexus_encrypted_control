@@ -12,7 +12,7 @@ import numpy as np
 import csv
 
 
-from pymomorphic3 import pymomorphic_py2 as pymh #Change to pymomorphic_py3 to use with python3
+from pymomorphic import pymomorphic_py2 as pymh #Change to pymomorphic_py3 to use with python3
 
 
 

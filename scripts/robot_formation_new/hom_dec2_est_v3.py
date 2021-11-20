@@ -11,7 +11,7 @@ from geometry_msgs.msg import Twist
 import csv
 import numpy as np
 
-from pymomorphic3 import pymomorphic_py2 as pymh #Change to pymomorphic_py3 to use with python3
+from pymomorphic import pymomorphic_py2 as pymh #Change to pymomorphic_py3 to use with python3
 
 
 class Hom_decrypt:

@@ -6,7 +6,7 @@ from distutils.core import setup
 from catkin_pkg.python_setup import generate_distutils_setup
 
 setup_args = generate_distutils_setup(
-     packages=['pymomorphic3'],
+     packages=['pymomorphic'],
      package_dir={'': 'src'},
      install_requires=['csv', 'random', 'rospkg', 'numpy']
 )

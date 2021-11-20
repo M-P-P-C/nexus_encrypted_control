@@ -7,7 +7,7 @@ from std_msgs.msg import String
 
 import numpy as np
 
-from pymomorphic3 import pymorph
+from pymomorphic import pymorph
 
 
 def nodes_init():

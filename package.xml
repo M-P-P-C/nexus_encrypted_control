@@ -29,7 +29,7 @@
   <build_export_depend>rplidar_ros</build_export_depend>
   <exec_depend>rplidar_ros</exec_depend>
 
-  <exec_depend>pymomorphic3</exec_depend>
+  <exec_depend>pymomorphic</exec_depend>
   
 
 
