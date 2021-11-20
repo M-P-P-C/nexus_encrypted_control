@@ -1,5 +1,5 @@
 # Nexus Encrypted Control
-nexus_encrypted_control is ROS package that uses homomorphic encryption in the control a formation of robots for the DTPA lab at the University of Groningen
+nexus_encrypted_control is a ROS package that uses homomorphic encryption in the control a formation of robots for the DTPA lab at the University of Groningen
 
 # Installing
 
