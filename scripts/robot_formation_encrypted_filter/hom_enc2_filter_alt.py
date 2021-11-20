@@ -25,9 +25,11 @@ class HomEncrypt:
         self.name='n_'+str(int(sys.argv[1])) 
 
         #Define desired distance for agents
-        self.d = 0.8
+        self.d = float(0.8)
+        self.d_x = float(np.sqrt((self.d**(2))/2))
+        self.d_y = float(np.sqrt((self.d**(2))/2))
         if int(sys.argv[1]) == 1: #Used to set an agent with a constant mismatch (for estimator)
-            self.d = 0.8
+            self.d = self.d #+0.05
 
         # Initialize encryption
         self.p_enc = 10**13
@@ -108,21 +110,26 @@ class HomEncrypt:
 
             z_values = z_values.reshape((robots, 3))
 
-            z_reciprocal=np.zeros((robots,1))
-            for i in range(robots):
-                z_reciprocal[i] = z_values[i][0]**(-1)
+            #z_reciprocal=np.zeros((robots,1))
+            #for i in range(robots):
+            #    z_reciprocal[i] = z_values[i][0]**(-1)
 
-            z_values = np.append(z_values, z_reciprocal, axis=1)
+            d_arr=np.zeros((robots,1)) #Replace z_reciprocal for desired distance to compute (e_x + d)
+            for i in range(robots):
+                d_arr[i] = - self.d_x
+
+            z_values = np.append(z_values, d_arr, axis=1)
 
 
             ########## filter computation and publishing
 
-            rospy.loginfo("actual u_x: {}".format(0.5*(z_values[0][1]-0.8)))
+            rospy.loginfo("actual u_x: {}".format(0.7*(z_values[0][1]-self.d_x)))
 
             noise = np.zeros((robots, 2), dtype = np.float32)
-
+            #'''
             for agent in range(robots):
                 for j in [1,2]:
+                    #z_values[agent][j] = -z_values[agent][j]
                     noise[agent][j-1] = round(z_values[agent][j]) - z_values[agent][j] + np.random.randint(low=0, high =3)
                     z_values[agent][j] = z_values[agent][j] + noise[agent][j-1]
 
@@ -143,7 +150,7 @@ class HomEncrypt:
             rospy.loginfo("noise: {}".format(noise))
             
             ##########
-
+            #'''
 
             z_values[:, 0] = z_values[:, 0] - self.d #substract desired distance from first column of array
 
@@ -176,8 +183,8 @@ class HomEncrypt:
 
 
             # Scaling of data
-            scal1 = 4 #scaling of error
-            scal2 = 2 #scaling of x
+            scal1 = 3 #scaling of error
+            scal2 = 3 #scaling of x
             scal3 = scal2 #scaling of y must be same as x
             scal4 = 3 #scaling of reciprocal of z
 
@@ -185,10 +192,10 @@ class HomEncrypt:
             
             z_values[low] = 0 #Make sure low values are 0
 
-            scal1 = self.my_key.log_scaling(z_values[:, 0], scal1)
-            scal2 = self.my_key.log_scaling(z_values[:, 1], scal2)
-            scal3 = self.my_key.log_scaling(z_values[:, 2], scal3)
-            scal4 = self.my_key.log_scaling(z_values[:, 3], scal4)
+            scal1 = (z_values[:, 0]*100,100)#self.my_key.log_scaling(z_values[:, 0], scal1)
+            scal2 = (z_values[:, 1]*100,100)#self.my_key.log_scaling(z_values[:, 1], scal2)
+            scal3 = (z_values[:, 2]*100,100)#self.my_key.log_scaling(z_values[:, 2], scal3)
+            scal4 = (z_values[:, 3]*100,100)#self.my_key.log_scaling(z_values[:, 3], scal4)
 
             z_values[:, 0] = scal1[0]
             z_values[:, 1] = scal2[0]
@@ -228,27 +235,27 @@ class HomEncrypt:
             self.pub_e.publish(String(error_topub))
 
             
-            # Publish reciprocal of z
+            # Publish desired distance
             zr_ciph = [[]]*robots
             
             for i in range(robots):
 
                 m = [z_values[i][3]] 
 
-                zr_ciph[i] = self.my_key.encrypt2(m) 
+                zr_ciph[i] = self.my_key.encrypt(m) 
                 
-            rec_z_topub = pymh.prep_pub_ros_str(zr_ciph)
+            rec_z_topub = pymh.prep_pub_ros_str(zr_ciph[0].tolist())
 
             self.pub_z.publish(String(rec_z_topub))
             
 
 
             # Publish x and y distances
-            x_y = [[row[i] for row in z_values] for i in range(1,3)] #[[x1,x2,x3],[y1,y2,y3]]
+            x_y = [row[i] for row in z_values for i in range(1,3)] #[[x1,x2,x3],[y1,y2,y3]]
 
-            x_y_enc = self.my_key.enc_2_mat(x_y)
+            x_y_enc = self.my_key.encrypt(x_y)
 
-            x_y_enc_topub = pymh.prep_pub_ros_str(x_y_enc)
+            x_y_enc_topub = pymh.prep_pub_ros_str(x_y_enc.tolist())
             
             self.pub_xy.publish(String(x_y_enc_topub))
             

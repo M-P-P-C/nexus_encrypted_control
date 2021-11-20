@@ -5,7 +5,7 @@ import os
 
 import rospy
 import rospkg
-from std_msgs.msg import String
+from std_msgs.msg import String, MultiArrayDimension, Int32, Int64MultiArray
 from rospy.numpy_msg import numpy_msg
 
 import numpy as np
@@ -14,50 +14,36 @@ import csv
 from pymomorphic3 import pymomorphic_py2 as pymh #Change to pymomorphic_py3 to use with python3
 
 
-
 from rospy_tutorials.msg import Floats
-from std_msgs.msg import Int32, Int64MultiArray, MultiArrayDimension
 
-from rospy.numpy_msg import numpy_msg
-from geometry_msgs.msg import Twist
 
 
 class Controller:
-    ''' The controller uses the interagent distances to determine the desired velocity of the Nexus '''
+    '''This version of the controller does not use Hector's formation control law, as Suzane's research
+    only makes use of the error in desired distances for the controller'''
 
     ''' NOTE: this script requires the dataprocessing node to be running first, as well as an input
         argument, an example of how to properly run this code in the terminal is as following:
-        
-        rosrun lasmulticontrol3 dataprocessingnode_N.py "1" 
+
+        rosrun nexus_encrypted_control controller_N_hom_encr_formation_filter_one.py "1" 
         
         where "1" is the value assigned to the robot
         '''
     
     def __init__(self):
-
+        
         # Get input argument and save it as a string (e.g. n_1)
         self.name='n_'+str(int(sys.argv[1])) 
 
         # controller variables
-        self.running = 1
         self.d = float(0.8)
+        self.d_x = np.sqrt((self.d**(2))/2)
+        self.d_y = np.sqrt((self.d**(2))/2)
         self.dd = np.float32(np.sqrt(np.square(self.d)+np.square(self.d)))
         self.c = np.float32(0.5)
         self.U_old = np.array([0, 0])
         self.U_oldd = np.array([0, 0])
-
-        # prepare Log arrays
-        self.E1_log = np.array([])
-        self.E2_log = np.array([])
-        self.E3_log = np.array([])
-        self.E4_log = np.array([])
-        self.E5_log = np.array([])
-        self.E6_log = np.array([])
-        self.Un = np.float32([])
-        self.U_log = np.array([])
-        self.k = 0
         self.mu_hat_log =[]
-        self.DT_log =[]
 
         # Prepare time variables
         self.time = np.float64([])
@@ -68,7 +54,26 @@ class Controller:
 
         # Prepare shutdown
         rospy.on_shutdown(self.shutdown)
+    
+        # prepare Log arrays
+        self.E1_log = np.array([])
+        self.E2_log = np.array([])
+        self.E3_log = np.array([])
+        self.E4_log = np.array([])
+        self.E5_log = np.array([])
+        self.E6_log = np.array([])
+        self.Un = np.float32([])
+        self.U_log = np.array([])
+        self.time = np.float64([])
+        self.time_log = np.array([])
+        self.now = np.float64([rospy.get_time()])
+        self.old = np.float64([rospy.get_time()])
+        self.begin = np.float64([rospy.get_time()])
+        self.k = 0
 
+        self.mu_hat = [0, 0, 0]
+        self.o = 1
+        
         # Prepare publishers
         self.pub_controller = rospy.Publisher(self.name+'/cmd_vel_enc', String, queue_size=1)
         self.pub_controller_estimator = rospy.Publisher(self.name+'/mu_hat_enc_tot', String, queue_size=1)
@@ -84,7 +89,8 @@ class Controller:
         rospy.Subscriber(self.name+'/enc_dt', String, callback = self.recover_DT)
         rospy.Subscriber(self.name+'/enc_x_and_y', String, callback = self.controller)
 
-        loop=0
+        # subscribe to controller_variables
+        rospy.Subscriber('/controller_variables', numpy_msg(Floats), self.update_controller_variables)
 
         # Motion parameters
         self.x_dot = np.float32(0)
@@ -99,23 +105,12 @@ class Controller:
         
         self.mu = self.mu_x+self.mu_y+self.mu_r
         self.mut = self.mut_x+self.mut_y+self.mut_r
-        
-
-        self.mu_hat = [0, 0, 0]
-        self.o = 1
-                
-        # subscribe to z_values topic
-        #rospy.Subscriber(self.name+'/encrypted_data', Int64MultiArray, self.controller)
-        rospy.Subscriber(self.name+'/agents', Int32, self.n)
-
 
 
     def n(self, data):   #This is used to extract the value of n (i.e. the number of robots the agent detected, published from the from the dataprocessor node)
-        if self.running < 10:
+        
+        if not rospy.is_shutdown():
             self.n=data.data
-       
-        elif 10 < self.running < 1000:
-            self.shutdown()
 
     def recover_encryption_vars(self, data):
 
@@ -159,6 +154,7 @@ class Controller:
 
     def update_controller_variables(self, data):
         ''' Update controller variables '''
+
         if not rospy.is_shutdown():
             # Assign data 
             self.controller_variables = data.data
@@ -184,11 +180,9 @@ class Controller:
             self.mut = self.mut_x+self.mut_y+self.mut_r
         
     def controller(self, data):
-        ''' Calculate U based on z_values and save error velocity in log arrays '''    
-
+        ''' Calculate U based on z_values and save error velocity in log arrays '''
         if self.pub_mu.get_num_connections() > 0: #To avoid the acumulation of operations on self.mu_hat we wait for the decryption to work
             
-
             rospy.loginfo("-------------------------------------------")
             rospy.loginfo("Controller of Nexus: %s", int(sys.argv[1]))
 
@@ -197,48 +191,41 @@ class Controller:
             
             self.xy = pymh.recvr_pub_ros_str(xy)
 
-            # Calculate new mu_hat
-            self.mu_hat = self.my_op.hom_mul_mat(self.FG_s_enc, [self.mu_hat, self.mu[0]])[0] #if constantly running this function will constantly add to self.mu_hat
+
+            # Control law
+            #U = self.c*BbDz.dot(Dzt).dot(Ed) #+ (Ab.dot(z)).reshape((2, 1))
+
+            #print self.Hom_mul([self.Hom_mul([list(BbDz[0][0])], [list(Dzt.astype(int))])], [list((Ed.astype(int)))])
+
+            #U =  self.Hom_mul([self.Hom_mul([BbDz[0][0]], Dzt[0])], Ed[0])
+
 
             X=[]
-            X2=[]
+            X2=[0]
 
             Y=[]
-            Y2=[]
+            Y2=[0]
 
-            # [X; Y] x mu_hat
-            xy_by_mu_x = self.my_op.hom_multiply([self.mu_hat], [self.xy[0][0]])
-            xy_by_mu_y = self.my_op.hom_multiply([self.mu_hat], [self.xy[1][0]])
-            xy_by_mu = [xy_by_mu_x[0], xy_by_mu_y[0]]
+            from operator import add
+                
+            X.append(map(add, self.xy[0], self.z_rec[0]))
+            Y.append(map(add, self.xy[1], self.z_rec[0]))
 
 
-            # [X; Y] x Error
-            xy_err = self.my_op.hom_mul_mat(self.xy, self.e2)
+            Z = [X[0],Y[0]]
 
-            # Calculate final X and Y velocities (For both sections of the controller (U = Controller + Estimator))
-            X = self.my_op.hom_multiply([xy_err[0]] , self.z_rec[0])
-            Y = self.my_op.hom_multiply([xy_err[1]] , self.z_rec[0])
-
-            X2 = (self.my_op.hom_multiply([xy_by_mu[0]] , self.z_rec[0]))
-            Y2 = (self.my_op.hom_multiply([xy_by_mu[1]] , self.z_rec[0])) 
-
-            # Assemble an array with the X and Y velocities 
-            Z = [X,Y]
-            Z2 = [X2,Y2]  
-
-            # Publish mu_hat 
-            #rospy.loginfo("%s + %s", self.my_key.decrypt(self.mu_hat)[0], self.my_key.decrypt(self.mu[0])[0])
-            mu_str = pymh.prep_pub_ros_str(self.mu_hat)
-            self.pub_mu.publish(String(mu_str))
+            Z2 = [X2,Y2]
 
             # Publish X and Y Velocities
             Z_str = pymh.prep_pub_ros_str(Z) 
             self.pub_controller.publish(String(Z_str))
 
+
             # Publish X and Y Velocities of Estimating part of controller
             Z2_str = pymh.prep_pub_ros_str(Z2) 
             self.pub_controller_estimator.publish(String(Z2_str))
 
+            
             # Update Time variables
             self.now = np.float64([rospy.get_time()])
             self.time = np.float64([self.now-self.old])
@@ -255,8 +242,9 @@ class Controller:
 
 
 
-if __name__ == '__main__':
 
+if __name__ == '__main__':
+    
     try:
         rospy.init_node('controller_enc_'+str(int(sys.argv[1])), anonymous=False)
         r = rospy.Rate(10)
@@ -267,4 +255,6 @@ if __name__ == '__main__':
     except rospy.ROSInterruptException:
         rospy.loginfo("Controller node_"+str(int(sys.argv[1]))+" terminated.")  
         pass
+ 
+
 
