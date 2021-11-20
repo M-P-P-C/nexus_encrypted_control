@@ -94,7 +94,7 @@ class Controller:
         rospy.Subscriber(self.name+'/enc_x_and_y', String, callback = self.controller)
 
         # Initialize Decryption for debugging
-        '''
+        #'''
         self.decrypt_init()
         #'''
 
