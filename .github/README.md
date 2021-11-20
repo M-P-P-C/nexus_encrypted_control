@@ -1,5 +1,10 @@
 # Nexus Encrypted Control
-nexus_encrypted_control is a ROS package that uses homomorphic encryption in the control a formation of robots for the DTPA lab at the University of Groningen
+nexus_encrypted_control is a ROS package that uses homomorphic encryption in the control a formation of robots for the DTPA lab at the University of Groningen.
+
+# Background
+You can find the original thesis [here](https://fse.studenttheses.ub.rug.nl/21680/), or the resulting conference paper [here](https://arxiv.org/abs/2104.07684#).
+
+For more information on the homomorphic encryption see the work by Junsoo Kim in [[1]](#1)
 
 # Installing
 
@@ -24,3 +29,10 @@ This package contains multiple launch files:
 #Dataflow
 
 ![alt text](Encryption_Dataflow.svg)
+
+# References
+
+<a id="1">[1]</a> 
+Kim J., Shim H., Han K. (2020). 
+"*Comprehensive Introduction to Fully Homomorphic Encryption for Dynamic Feedback Controller via LWE-based Cryptosystem*". 
+In: Farokhi F. (eds) Privacy in Dynamical Systems Springer, Singapore. https://doi.org/10.1007/978-981-15-0493-8_10
